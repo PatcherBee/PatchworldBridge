@@ -1,0 +1,24 @@
+# --- CMake & Build Artifacts ---
+/out/
+/build/
+/bin/
+/obj/
+
+# --- Visual Studio Specific ---
+/.vs/
+/*.sln
+/*.vcxproj
+/*.filters
+/*.user
+*.pdb
+*.ilk
+*.exe
+*.lib
+
+# --- JUCE Specific ---
+/JuceLibraryCode/
+/Builds/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
