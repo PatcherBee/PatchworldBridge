@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="AssLzW" name="Patchworld MIDI OSC Bridge" projectType="guiapp"
-              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
-  <MAINGROUP id="umOpkX" name="Patchworld MIDI OSC Bridge">
+<JUCERPROJECT id="AssLzW" name="PatchworldBridge" projectType="guiapp" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="BeeTeam">
+  <MAINGROUP id="umOpkX" name="PatchworldBridge">
     <GROUP id="{397D688E-3610-4AC6-3CBD-6EECCAF53C66}" name="Source">
+      <GROUP id="{577FF634-CB2C-28B2-E39F-A3CB44B602E0}" name="Components">
+        <FILE id="cQNkdw" name="Common.h" compile="0" resource="0" file="Source/Components/Common.h"/>
+        <FILE id="pTs6N3" name="Controls.h" compile="0" resource="0" file="Source/Components/Controls.h"/>
+        <FILE id="a1S8Oo" name="Mixer.h" compile="0" resource="0" file="Source/Components/Mixer.h"/>
+        <FILE id="QZ99eK" name="Sequencer.h" compile="0" resource="0" file="Source/Components/Sequencer.h"/>
+        <FILE id="ZyTVQb" name="Tools.h" compile="0" resource="0" file="Source/Components/Tools.h"/>
+      </GROUP>
+      <FILE id="p6A9ua" name="logo.png" compile="0" resource="1" file="logo.png"/>
       <FILE id="HUXqul" name="SubComponents.h" compile="0" resource="0" file="Source/SubComponents.h"/>
       <FILE id="Ej6Amu" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="tkXB53" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
