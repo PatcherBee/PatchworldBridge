@@ -1,6 +1,7 @@
 /*
   ==============================================================================
     Source/Components/Controls.h
+    Updated: Poly Aftertouch Support
   ==============================================================================
 */
 #pragma once
@@ -13,23 +14,23 @@ public:
   juce::TextEditor ePlay, eStop, eRew, eLoop, eTap, eOctUp, eOctDn, ePanic;
   juce::Label lblGui{{}, "GUI Control"};
 
-  // Member variables for TX
+  // TX
   juce::Label lTXn{{}, "TX Note:"}, lTXv{{}, "TX Vel:"}, lTXoff{{}, "TX Off:"},
       lTXcc{{}, "TX CC:"}, lTXccv{{}, "TX CC Val:"}, lTXp{{}, "TX Pitch:"},
-      lTXpr{{}, "TX Press:"};
-  juce::TextEditor eTXn, eTXv, eTXoff, eTXcc, eTXccv, eTXp, eTXpr;
+      lTXpr{{}, "TX Press:"}, lTXpoly{{}, "TX PolyAT:"}; // Added PolyAT
+  juce::TextEditor eTXn, eTXv, eTXoff, eTXcc, eTXccv, eTXp, eTXpr, eTXpoly;
 
-  // Member variables for RX
+  // RX
   juce::Label lRXn{{}, "RX Note:"}, lRXnv{{}, "RX Vel:"},
       lRXnoff{{}, "RX Off:"};
   juce::TextEditor eRXn, eRXnv, eRXnoff;
 
-  // Simple Mode Volume Editors
   juce::TextEditor eVol1, eVol2;
 
   juce::Label lRXc{{}, "RX CC #:"}, lRXcv{{}, "RX CC Val:"},
-      lRXwheel{{}, "RX Wheel:"}, lRXpress{{}, "RX Press:"};
-  juce::TextEditor eRXc, eRXcv, eRXwheel, eRXpress;
+      lRXwheel{{}, "RX Wheel:"}, lRXpress{{}, "RX Press:"},
+      lRXpoly{{}, "RX PolyAT:"};
+  juce::TextEditor eRXc, eRXcv, eRXwheel, eRXpress, eRXpoly; // Added PolyAT
 
   juce::Label lPlay{{}, "Play:"}, lStop{{}, "Stop:"}, lRew{{}, "Rew:"},
       lLoop{{}, "Loop:"}, lTap{{}, "Tap:"}, lOctUp{{}, "Oct+:"},
@@ -51,6 +52,7 @@ public:
     setup(lTXccv, eTXccv, "/ch{X}ccvalue");
     setup(lTXp, eTXp, "/ch{X}pitch");
     setup(lTXpr, eTXpr, "/ch{X}pressure");
+    setup(lTXpoly, eTXpoly, "/ch{X}pressure"); // Default TX Poly
 
     // RX Addresses
     setup(lRXn, eRXn, "/ch{X}n");
@@ -60,6 +62,7 @@ public:
     setup(lRXcv, eRXcv, "/ch{X}cv");
     setup(lRXwheel, eRXwheel, "/ch{X}wheel");
     setup(lRXpress, eRXpress, "/ch{X}press");
+    setup(lRXpoly, eRXpoly, "/ch{X}press"); // Default RX Poly
 
     addAndMakeVisible(lblGui);
     lblGui.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
@@ -77,13 +80,12 @@ public:
     setup(lArpS, eArpS, "/arp/speed");
     setup(lArpV, eArpV, "/arp/velocity");
 
-    // Simple Mode setup
     addAndMakeVisible(eVol1);
     eVol1.setText("/ch1/vol");
     addAndMakeVisible(eVol2);
     eVol2.setText("/ch2/vol");
 
-    setSize(450, 900);
+    setSize(450, 950);
   }
 
   void setup(juce::Label &l, juce::TextEditor &e, juce::String def) {
@@ -104,7 +106,7 @@ public:
 
     auto addRow = [&](juce::Label &l, juce::TextEditor &e) {
       auto row = r.removeFromTop(25);
-      l.setBounds(row.removeFromLeft(60));
+      l.setBounds(row.removeFromLeft(70)); // Widened label
       e.setBounds(row);
       r.removeFromTop(5);
     };
@@ -116,6 +118,7 @@ public:
     addRow(lTXccv, eTXccv);
     addRow(lTXp, eTXp);
     addRow(lTXpr, eTXpr);
+    addRow(lTXpoly, eTXpoly); // Added
 
     r.removeFromTop(10);
 
@@ -126,6 +129,7 @@ public:
     addRow(lRXcv, eRXcv);
     addRow(lRXwheel, eRXwheel);
     addRow(lRXpress, eRXpress);
+    addRow(lRXpoly, eRXpoly); // Added
 
     r.removeFromTop(15);
 
@@ -140,7 +144,6 @@ public:
     addRow(lPanic, ePanic);
 
     r.removeFromTop(10);
-
     addRow(lMixVol, eMixVol);
     addRow(lMixMute, eMixMute);
     addRow(lArpS, eArpS);
@@ -183,7 +186,6 @@ public:
         addAndMakeVisible(button);
       }
     }
-
     void resized() override {
       auto r = getLocalBounds().reduced(2);
       addrBox.setBounds(r.removeFromBottom(20));
@@ -195,7 +197,6 @@ public:
   };
 
   juce::OwnedArray<GenericControl> controls;
-
   ControlPage() {
     for (int i = 0; i < 4; ++i)
       controls.add(
@@ -203,16 +204,13 @@ public:
     for (int i = 0; i < 4; ++i)
       controls.add(
           new GenericControl(false, "/ctrl/button/" + juce::String(i + 1)));
-
     for (auto *c : controls)
       addAndMakeVisible(c);
   }
-
   void resized() override {
     auto r = getLocalBounds().reduced(15, 20);
     auto sliderRow = r.removeFromTop(r.getHeight() / 2);
     int w = r.getWidth() / 4;
-
     for (int i = 0; i < 4; ++i)
       controls[i]->setBounds(sliderRow.removeFromLeft(w).reduced(4, 0));
     for (int i = 4; i < 8; ++i)

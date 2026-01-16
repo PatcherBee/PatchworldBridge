@@ -1,3 +1,9 @@
+/*
+  ==============================================================================
+    Source/Main.cpp
+    Updated: Clean Start
+  ==============================================================================
+*/
 #include "MainComponent.h"
 #include <JuceHeader.h>
 
@@ -10,7 +16,7 @@ public:
   const juce::String getApplicationVersion() override { return "1.0.0"; }
   bool moreThanOneInstanceAllowed() override { return true; }
 
-  void initialise(const juce::String &commandLine) override {
+  void initialise(const juce::String &) override {
     mainWindow.reset(new MainWindow(getApplicationName()));
   }
 
@@ -25,6 +31,14 @@ public:
       setContentOwned(new MainComponent(), true);
       setResizable(true, true);
       centreWithSize(800, 650);
+
+      // --- THE TOOLBAR LOGO FIX ---
+      if (BinaryData::logo_pngSize > 0) {
+        auto icon = juce::ImageCache::getFromMemory(BinaryData::logo_png,
+                                                    BinaryData::logo_pngSize);
+        setIcon(icon);
+      }
+
       setVisible(true);
       toFront(true);
     }

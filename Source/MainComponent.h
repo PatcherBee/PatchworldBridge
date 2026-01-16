@@ -1,3 +1,9 @@
+/*
+  ==============================================================================
+    Source/MainComponent.h
+    Status: FIXED (Restored Missing Identifiers & Structs)
+  ==============================================================================
+*/
 #pragma once
 #include "SubComponents.h"
 #include <JuceHeader.h>
@@ -43,7 +49,6 @@ private:
   enum class AppView { Dashboard, Control, OSC_Config, Help };
   AppView currentView = AppView::Dashboard;
 
-  // Logic (Moved up for initialization order safety)
   juce::MidiKeyboardState keyboardState;
 
   // GUI
@@ -57,21 +62,29 @@ private:
   juce::GroupComponent grpNet{{}, "Network"}, grpIo{{}, "MIDI"},
       grpArp{{}, "Arp"};
   juce::TextEditor edIp, edPOut, edPIn, helpText;
+  juce::Viewport helpViewport;
   juce::TextButton btnConnect{"Connect"}, btnPlay{"Play"}, btnStop{"Stop"},
-      btnPrev{"<"}, btnSkip{">"}, btnResetFile{"Rst"}, btnClearPR{"Clr"},
+      btnPrev{"<"}, btnSkip{">"}, btnResetFile{"Reset"}, btnClearPR{"Clear"},
       btnResetBPM{"Reset BPM"}, btnTapTempo{"Tap Tempo"}, btnPrOctUp{"Oct +"},
       btnPrOctDown{"Oct -"};
   juce::Slider tempoSlider, latencySlider, sliderNoteDelay, sliderArpSpeed,
       sliderArpVel;
   juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern;
+
+  // Toggles
   juce::ToggleButton btnLinkToggle{"Link"}, btnArp{"Latch"}, btnArpSync{"Sync"};
+  juce::ToggleButton btnPreventBpmOverride{"Lock BPM"};
+  juce::ToggleButton btnBlockMidiOut{"Block Out"};
 
   ConnectionLight ledConnect;
   PhaseVisualizer phaseVisualizer;
-  MidiKeyboardComponent horizontalKeyboard{
+
+  // Custom wrappers defined in SubComponents.h
+  CustomKeyboard horizontalKeyboard{
       keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
-  MidiKeyboardComponent verticalKeyboard{
+  CustomKeyboard verticalKeyboard{
       keyboardState, juce::MidiKeyboardComponent::verticalKeyboardFacingRight};
+
   ComplexPianoRoll trackGrid{keyboardState};
   TrafficMonitor logPanel;
   MidiPlaylist playlist;
@@ -83,47 +96,40 @@ private:
   ControlPage controlPage;
 
   // Logic
-  // juce::MidiKeyboardState keyboardState; // Moved up
   std::unique_ptr<juce::MidiInput> midiInput;
   std::unique_ptr<juce::MidiOutput> midiOutput;
   juce::OSCSender oscSender;
   juce::OSCReceiver oscReceiver;
   bool isOscConnected = false;
   juce::MidiMessageSequence playbackSeq;
-  double sequenceLength = 0, currentFileBpm = 0, currentTransportTime = 0;
+  double sequenceLength = 0, currentFileBpm = 0;
   int playbackCursor = 0;
   bool isPlaying = false;
   juce::CriticalSection midiLock;
+
+  // Arp State
   juce::Array<int> heldNotes;
   std::vector<int> noteArrivalOrder;
-  int arpNoteIndex = 0, lastNumPeers = -1, virtualOctaveShift = 0,
-      tapCounter = 0, stepSeqIndex = -1, pianoRollOctaveShift = 0;
-  int lockedRollStep = -1;
-  double nextRollBeat = 0.0;
+  int arpNoteIndex = 0;
+
+  int lastNumPeers = -1, virtualOctaveShift = 0, tapCounter = 0,
+      stepSeqIndex = -1, pianoRollOctaveShift = 0;
   std::vector<double> tapTimes;
   std::set<int> activeChannels;
-  std::vector<std::pair<double, juce::MidiMessage>> noteOffQueue;
   juce::OpenGLContext openGLContext;
 
-  // Sync / Audio State
-  bool isWaitingToStart = false;
-  bool hasLinkStartupReset = false;
-  double timeSinceStart = 0.0;
   double lastProcessedBeat = -1.0;
-  double lastPhase = 0.0;
-  double lastLookaheadTime = -1.0;
-  double currentSampleRate = 44100.0;
-  double transportStartBeat = 0.0; // Anchor for relative sync
-  double lastLinkBeat = 0.0;       // For incremental sync
+  double transportStartBeat = 0.0;
   double ticksPerQuarterNote = 960.0;
+  double currentSampleRate = 44100.0;
+  bool pendingSyncStart = false;
 
   int linkRetryCounter = 0;
-  bool linkInitialized = false;
+  bool startupRetryActive = true;
+  bool isHandlingOsc = false;
 
   juce::Slider vol1Simple, vol2Simple;
   juce::TextEditor txtVol1Osc, txtVol2Osc;
-
-  bool pendingSyncStart = false; // Flag for strict bar alignment
 
   struct ActiveNote {
     int channel;
@@ -131,6 +137,17 @@ private:
     double releaseTime;
   };
   std::vector<ActiveNote> activeVirtualNotes;
+
+  // --- RESTORED: This was causing the C2065 error ---
+  struct ScheduledNote {
+    int channel;
+    int note;
+    double releaseTimeMs;
+  };
+  std::vector<ScheduledNote> scheduledNotes;
+
+  // --- RESTORED: This was causing the C3861 error ---
+  double getDurationFromVelocity(float velocity0to1);
 
   void updateVisibility();
   void setView(AppView v);
@@ -146,11 +163,6 @@ private:
   void toggleChannel(int ch, bool active);
   void performUndo();
   void performRedo();
-  void fillMidiBufferFromSequence(juce::MidiBuffer &midiMessages,
-                                  double currentBeat, int numSamples,
-                                  double latencySec);
-  void processEventsInRange(juce::MidiBuffer &buffer, double startTime,
-                            double endTime);
 
   void handleIncomingMidiMessage(juce::MidiInput *,
                                  const juce::MidiMessage &) override;

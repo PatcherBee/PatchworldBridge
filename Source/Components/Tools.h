@@ -1,6 +1,7 @@
 /*
   ==============================================================================
     Source/Components/Tools.h
+    Updated: Playlist Label, "!" Log, Stats Logic
   ==============================================================================
 */
 #pragma once
@@ -12,159 +13,169 @@ public:
   juce::TextEditor logDisplay;
   juce::Label statsLabel;
   juce::ToggleButton btnPause{"Pause"};
-  juce::TextButton btnClear{"Clear"};
+  juce::TextButton btnClear{"Clear Log"};
   juce::StringArray messageBuffer;
   int visibleLines = 0;
-  int timerTicks = 0;
-  bool autoPauseEnabled = true;
 
   TrafficMonitor() {
     statsLabel.setFont(juce::FontOptions(12.0f));
     statsLabel.setColour(juce::Label::backgroundColourId,
                          Theme::bgPanel.brighter(0.1f));
     statsLabel.setJustificationType(juce::Justification::centredLeft);
+    statsLabel.setText("Network: -- | Latency: --", juce::dontSendNotification);
     addAndMakeVisible(statsLabel);
+
     btnPause.setToggleState(false, juce::dontSendNotification);
-    btnPause.onClick = [this] {
-      if (!btnPause.getToggleState()) {
-        visibleLines = 0;
-        autoPauseEnabled = false;
-      }
-    };
     addAndMakeVisible(btnPause);
+
     btnClear.onClick = [this] { resetStats(); };
     addAndMakeVisible(btnClear);
+
     logDisplay.setMultiLine(true);
     logDisplay.setReadOnly(true);
-    logDisplay.setScrollbarsShown(true);
-    logDisplay.setColour(juce::TextEditor::backgroundColourId,
-                         juce::Colours::black);
-    logDisplay.setColour(juce::TextEditor::textColourId,
-                         juce::Colours::lightgreen);
-    logDisplay.setFont(juce::FontOptions("Consolas", 11.0f, juce::Font::plain));
+    logDisplay.setFont(juce::FontOptions(13.0f));
+    logDisplay.setColour(juce::TextEditor::backgroundColourId, Theme::bgDark);
+    logDisplay.setColour(juce::TextEditor::outlineColourId, Theme::grid);
     addAndMakeVisible(logDisplay);
+
     startTimer(100);
   }
-  void resetStats() {
-    messageBuffer.clear();
-    visibleLines = 0;
-    logDisplay.clear();
-    if (autoPauseEnabled)
-      btnPause.setToggleState(false, juce::dontSendNotification);
-    repaint();
-  }
-  void log(juce::String msg) {
-    if (autoPauseEnabled && !btnPause.getToggleState() && visibleLines >= 100) {
-      if (messageBuffer.size() > 0 &&
-          messageBuffer[messageBuffer.size() - 1] == "--- Paused ---")
-        return;
-      messageBuffer.add("--- Paused ---");
-      btnPause.setToggleState(true, juce::dontSendNotification);
+
+  void log(const juce::String &msg, bool alwaysShow = false) {
+    if (btnPause.getToggleState() && !alwaysShow)
       return;
-    }
-    if (btnPause.getToggleState())
-      return;
-    messageBuffer.add(msg);
-    visibleLines++;
+    juce::ScopedLock sl(logLock);
+    // CHANGED: Use "!" instead of time
+    messageBuffer.add("! " + msg);
     if (messageBuffer.size() > 100)
-      messageBuffer.removeRange(0, 20);
+      messageBuffer.remove(0);
+    visibleLines++;
   }
+
+  void updateStats(const juce::String &text) {
+    statsLabel.setText(text, juce::dontSendNotification);
+  }
+
+  void resetStats() {
+    juce::ScopedLock sl(logLock);
+    messageBuffer.clear();
+    logDisplay.clear();
+    visibleLines = 0;
+  }
+
   void timerCallback() override {
-    timerTicks++;
-    if (timerTicks >= 50) {
-      timerTicks = 0;
-      int lat = juce::Random::getSystemRandom().nextInt(10) + 2;
-      statsLabel.setText(" Latency: " + juce::String(lat) + "ms",
-                         juce::dontSendNotification);
-    }
-    if (messageBuffer.size() > 0) {
-      logDisplay.setText(messageBuffer.joinIntoString("\n"));
+    if (visibleLines > 0) {
+      juce::ScopedLock sl(logLock);
+      juce::String text;
+      for (auto &m : messageBuffer)
+        text += m + "\n";
+      logDisplay.setText(text);
       logDisplay.moveCaretToEnd();
+      visibleLines = 0;
     }
   }
+
   void resized() override {
     auto r = getLocalBounds();
-    auto header = r.removeFromTop(25);
-    btnClear.setBounds(header.removeFromRight(50).reduced(2));
-    btnPause.setBounds(header.removeFromRight(60).reduced(2));
-    statsLabel.setBounds(header);
+    auto top = r.removeFromTop(25);
+    statsLabel.setBounds(top.removeFromLeft(top.getWidth() - 120));
+    btnPause.setBounds(top.removeFromLeft(60).reduced(2));
+    btnClear.setBounds(top.removeFromLeft(60).reduced(2));
     logDisplay.setBounds(r);
   }
+
+private:
+  juce::CriticalSection logLock;
 };
 
 class MidiPlaylist : public juce::Component, public juce::ListBoxModel {
 public:
   juce::ListBox list;
-  juce::Label header{{}, "Playlist (.mid)"};
   juce::StringArray files;
-  int currentIndex = -1;
-  juce::TextButton btnClear{"CLR"}, btnLoop{"Loop"};
+  int currentIndex = 0;
+  juce::ToggleButton btnLoop{"Loop"};
+  juce::TextButton btnClearPlaylist{"Clear"};
+  juce::Label lblTitle{{}, "Playlist"}; // NEW LABEL
+
   MidiPlaylist() {
-    header.setFont(juce::FontOptions(13.0f).withStyle("Bold"));
-    header.setColour(juce::Label::backgroundColourId,
-                     Theme::bgPanel.brighter(0.1f));
-    addAndMakeVisible(header);
+    list.setModel(this);
+    list.setRowHeight(24);
+    list.setColour(juce::ListBox::backgroundColourId, Theme::bgPanel);
+    addAndMakeVisible(list);
 
-    btnClear.onClick = [this] {
-      files.clear();
-      list.updateContent();
-      repaint();
-    };
-    addAndMakeVisible(btnClear);
-
-    btnLoop.setClickingTogglesState(true);
-    btnLoop.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
+    btnLoop.setColour(juce::ToggleButton::textColourId, juce::Colours::white);
     addAndMakeVisible(btnLoop);
 
-    list.setModel(this);
-    list.setColour(juce::ListBox::backgroundColourId,
-                   juce::Colours::transparentBlack);
-    addAndMakeVisible(list);
+    // Setup Header Label
+    lblTitle.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
+    lblTitle.setJustificationType(juce::Justification::centred);
+    lblTitle.setColour(juce::Label::textColourId, Theme::accent);
+    addAndMakeVisible(lblTitle);
+
+    addAndMakeVisible(btnClearPlaylist);
+    btnClearPlaylist.onClick = [this] {
+      files.clear();
+      list.updateContent();
+      list.repaint();
+    };
   }
-  void addFile(juce::String f) {
-    files.add(f);
-    list.updateContent();
-    list.repaint();
+
+  void addFile(const juce::String &path) {
+    if (!files.contains(path)) {
+      files.add(path);
+      list.updateContent();
+      list.repaint();
+    }
   }
+
   juce::String getNextFile() {
     if (files.isEmpty())
       return "";
     currentIndex = (currentIndex + 1) % files.size();
-    list.repaint();
+    list.selectRow(currentIndex);
     return files[currentIndex];
   }
+
   juce::String getPrevFile() {
     if (files.isEmpty())
       return "";
     currentIndex = (currentIndex - 1 + files.size()) % files.size();
-    list.repaint();
+    list.selectRow(currentIndex);
     return files[currentIndex];
   }
+
   int getNumRows() override { return files.size(); }
+
   void paint(juce::Graphics &g) override {
     g.fillAll(Theme::bgPanel);
     if (files.isEmpty()) {
       g.setColour(juce::Colours::grey);
       g.setFont(juce::FontOptions(14.0f));
-      g.drawText("- Drag & Drop .mid -", getLocalBounds().withTrimmedTop(20),
+      g.drawText("- Drag Folder or .mid -", getLocalBounds().withTrimmedTop(20),
                  juce::Justification::centred, true);
     }
   }
+
   void paintListBoxItem(int r, juce::Graphics &g, int w, int h,
                         bool s) override {
     if (s || r == currentIndex)
       g.fillAll(Theme::accent.withAlpha(0.3f));
     g.setColour(juce::Colours::white);
     g.setFont(juce::FontOptions(14.0f));
-
     juce::File f(files[r]);
-    g.drawText(f.getFileName(), 5, 0, w, h, juce::Justification::centredLeft);
+    g.drawText(f.getFileNameWithoutExtension(), 5, 0, w - 5, h,
+               juce::Justification::centredLeft, true);
   }
+
   void resized() override {
-    auto h = getLocalBounds().removeFromTop(20);
-    btnClear.setBounds(h.removeFromRight(40));
-    btnLoop.setBounds(h.removeFromRight(50)); // Beside Clear
-    header.setBounds(h);
-    list.setBounds(getLocalBounds().withTrimmedTop(20));
+    auto r = getLocalBounds();
+    auto topRow = r.removeFromTop(25);
+
+    // Layout: Loop | Playlist | Clear
+    btnLoop.setBounds(topRow.removeFromLeft(50));
+    btnClearPlaylist.setBounds(topRow.removeFromRight(50).reduced(2));
+    lblTitle.setBounds(topRow); // Centered in remaining space
+
+    list.setBounds(r);
   }
 };
