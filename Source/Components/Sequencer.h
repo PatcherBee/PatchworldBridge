@@ -41,29 +41,32 @@ public:
     cmbRate.addItem("1/32", 6);
     cmbRate.setSelectedId(5, juce::dontSendNotification);
 
-    // Roll Buttons
+    // Roll Buttons (Momentary)
     auto setupRoll = [&](juce::TextButton &b, int div) {
-      b.setClickingTogglesState(true);
-      b.setRadioGroupId(101);
+      b.setClickingTogglesState(false); // Momentary
       b.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
-      b.onClick = [this, div, &b] {
-        if (b.getToggleState())
+      b.onStateChange = [this, div, &b] {
+        if (b.isDown()) {
           activeRollDiv = div;
-        else if (activeRollDiv == div)
-          activeRollDiv = 0;
+        } else {
+          // Only clear if this button was the one active (prevents clearing if
+          // sliding between buttons, though simple check is fine)
+          if (activeRollDiv == div)
+            activeRollDiv = 0;
+        }
       };
       addAndMakeVisible(b);
     };
-    setupRoll(btnRoll4, 4);
-    setupRoll(btnRoll8, 8);
-    setupRoll(btnRoll16, 16);
-    setupRoll(btnRoll32, 32);
+    setupRoll(btnRoll4, 1);
+    setupRoll(btnRoll8, 2);
+    setupRoll(btnRoll16, 4);
+    setupRoll(btnRoll32, 8);
 
-    // Root Note Slider (Label Removed)
+    // Root Note Slider
     addAndMakeVisible(noteSlider);
     noteSlider.setRange(36, 72, 1);
     noteSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    noteSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
+    noteSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 30, 20);
     noteSlider.textFromValueFunction = [](double value) {
       return juce::MidiMessage::getMidiNoteName((int)value, true, true, 3);
     };
@@ -87,6 +90,7 @@ public:
       addAndMakeVisible(b);
     }
     resized();
+    repaint();
   }
   void setActiveStep(int s) {
     if (currentStep != s) {
@@ -106,37 +110,43 @@ public:
     if (numSteps > 0 && currentStep >= 0) {
       float stepW = (float)getWidth() / numSteps;
       g.setColour(Theme::accent.withAlpha(0.6f));
-      g.fillRect((float)(currentStep * stepW), 30.0f, stepW,
-                 (float)(getHeight() - 30));
+      // Use the bounds of the first step button to find the start Y
+      if (stepButtons.size() > 0) {
+        auto stepBounds = stepButtons[0]->getBounds();
+        g.fillRect((float)(currentStep * stepW), (float)stepBounds.getY(),
+                   stepW, (float)stepBounds.getHeight());
+      }
     }
   }
 
   void resized() override {
-    auto r = getLocalBounds().reduced(2);
+    auto r = getLocalBounds().reduced(5);
+
+    // Header Row: Dropdowns, Note, Clear
     auto head = r.removeFromTop(30);
+    lblTitle.setBounds(head.removeFromLeft(75));
+    cmbSteps.setBounds(head.removeFromLeft(65).reduced(2));
+    cmbRate.setBounds(head.removeFromLeft(75).reduced(2));
 
+    // Root Note & Clear positioned at top-right
     btnClear.setBounds(head.removeFromRight(50).reduced(2));
+    noteSlider.setBounds(head.removeFromRight(100).reduced(2));
 
-    lblTitle.setBounds(head.removeFromLeft(70));
-    cmbSteps.setBounds(head.removeFromLeft(50));
-    cmbRate.setBounds(head.removeFromLeft(60));
-    head.removeFromLeft(10);
+    // Momentary Roll Row
+    auto rollRow = r.removeFromTop(30);
+    int rollW = rollRow.getWidth() / 4;
+    btnRoll4.setBounds(rollRow.removeFromLeft(rollW).reduced(2));
+    btnRoll8.setBounds(rollRow.removeFromLeft(rollW).reduced(2));
+    btnRoll16.setBounds(rollRow.removeFromLeft(rollW).reduced(2));
+    btnRoll32.setBounds(rollRow.removeFromLeft(rollW).reduced(2));
 
-    // Roll Buttons
-    btnRoll4.setBounds(head.removeFromLeft(35).reduced(1));
-    btnRoll8.setBounds(head.removeFromLeft(35).reduced(1));
-    btnRoll16.setBounds(head.removeFromLeft(35).reduced(1));
-    btnRoll32.setBounds(head.removeFromLeft(35).reduced(1));
-
-    head.removeFromLeft(10);
-    // Note slider takes remaining
-    noteSlider.setBounds(head.reduced(2));
-
+    // Bottom: Large Beat Steps
     if (numSteps > 0) {
+      r.removeFromTop(5);
       float w = (float)r.getWidth() / numSteps;
       for (int i = 0; i < numSteps; ++i)
-        stepButtons[i]->setBounds((int)(r.getX() + i * w), r.getY(), (int)w,
-                                  r.getHeight());
+        stepButtons[i]->setBounds((int)(r.getX() + i * w), r.getY() + 10,
+                                  (int)w, r.getHeight() - 15);
     }
   }
 };
@@ -225,6 +235,27 @@ public:
       g.setColour(juce::Colours::white);
       g.setFont(juce::FontOptions(13.0f).withStyle("Bold"));
       g.drawText(activeTracks[i].name, r, juce::Justification::centred, true);
+    }
+  }
+  void mouseDown(const juce::MouseEvent &e) override {
+    if (activeTracks.empty())
+      return;
+    int cols = 4;
+    int itemW = getWidth() / cols;
+    int itemH = 30;
+
+    int col = e.x / itemW;
+    int row = e.y / itemH;
+    int index = row * cols + col;
+
+    if (index >= 0 && index < (int)activeTracks.size()) {
+      int ch = activeTracks[index].channel;
+      // Trigger a default note on this channel
+      keyboardState.noteOn(ch, 60, 0.8f);
+
+      // Auto off after 100ms
+      juce::Timer::callAfterDelay(
+          100, [this, ch] { keyboardState.noteOff(ch, 60, 0.0f); });
     }
   }
   void resized() override {}

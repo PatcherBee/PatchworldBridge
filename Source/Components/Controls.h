@@ -10,25 +10,57 @@
 class OscAddressConfig : public juce::Component {
 public:
   juce::Label lblTitle{{}, "OSC Addresses"};
+  juce::TextEditor ePlay, eStop, eRew, eLoop, eTap, eOctUp, eOctDn, ePanic;
   juce::Label lblGui{{}, "GUI Control"};
-  juce::Label lN{{}, "Note:"}, lV{{}, "Velocity:"}, lOff{{}, "Off:"},
-      lCC{{}, "CC#:"}, lCCV{{}, "CCVal:"}, lP{{}, "Pitch:"}, lPr{{}, "Touch:"};
-  juce::TextEditor eN, eV, eOff, eCC, eCCV, eP, ePr;
+
+  // Member variables for TX
+  juce::Label lTXn{{}, "TX Note:"}, lTXv{{}, "TX Vel:"}, lTXoff{{}, "TX Off:"},
+      lTXcc{{}, "TX CC:"}, lTXccv{{}, "TX CC Val:"}, lTXp{{}, "TX Pitch:"},
+      lTXpr{{}, "TX Press:"};
+  juce::TextEditor eTXn, eTXv, eTXoff, eTXcc, eTXccv, eTXp, eTXpr;
+
+  // Member variables for RX
+  juce::Label lRXn{{}, "RX Note:"}, lRXnv{{}, "RX Vel:"},
+      lRXnoff{{}, "RX Off:"};
+  juce::TextEditor eRXn, eRXnv, eRXnoff;
+
+  // Simple Mode Volume Editors
+  juce::TextEditor eVol1, eVol2;
+
+  juce::Label lRXc{{}, "RX CC #:"}, lRXcv{{}, "RX CC Val:"},
+      lRXwheel{{}, "RX Wheel:"}, lRXpress{{}, "RX Press:"};
+  juce::TextEditor eRXc, eRXcv, eRXwheel, eRXpress;
+
   juce::Label lPlay{{}, "Play:"}, lStop{{}, "Stop:"}, lRew{{}, "Rew:"},
-      lLoop{{}, "Loop:"};
-  juce::Label lTap{{}, "Tap:"}, lOctUp{{}, "Oct+:"}, lOctDn{{}, "Oct-:"};
-  juce::TextEditor ePlay, eStop, eRew, eLoop, eTap, eOctUp, eOctDn;
+      lLoop{{}, "Loop:"}, lTap{{}, "Tap:"}, lOctUp{{}, "Oct+:"},
+      lOctDn{{}, "Oct-:"}, lPanic{{}, "Panic:"};
+
+  juce::Label lMixVol{{}, "Mixer Vol:"}, lMixMute{{}, "Mixer Mute:"},
+      lArpS{{}, "Arp Spd:"}, lArpV{{}, "Arp Vel:"};
+  juce::TextEditor eMixVol, eMixMute, eArpS, eArpV;
 
   OscAddressConfig() {
     addAndMakeVisible(lblTitle);
     lblTitle.setFont(juce::FontOptions(16.0f).withStyle("Bold"));
-    setup(lN, eN, "/ch{X}note");
-    setup(lV, eV, "/ch{X}nvalue");
-    setup(lOff, eOff, "/ch{X}noteoff");
-    setup(lCC, eCC, "/ch{X}cc");
-    setup(lCCV, eCCV, "/ch{X}ccvalue");
-    setup(lP, eP, "/ch{X}pitch");
-    setup(lPr, ePr, "/ch{X}pressure");
+
+    // TX Addresses
+    setup(lTXn, eTXn, "/ch{X}note");
+    setup(lTXv, eTXv, "/ch{X}nvalue");
+    setup(lTXoff, eTXoff, "/ch{X}noteoff");
+    setup(lTXcc, eTXcc, "/ch{X}cc");
+    setup(lTXccv, eTXccv, "/ch{X}ccvalue");
+    setup(lTXp, eTXp, "/ch{X}pitch");
+    setup(lTXpr, eTXpr, "/ch{X}pressure");
+
+    // RX Addresses
+    setup(lRXn, eRXn, "/ch{X}n");
+    setup(lRXnv, eRXnv, "/ch{X}nv");
+    setup(lRXnoff, eRXnoff, "/ch{X}noff");
+    setup(lRXc, eRXc, "/ch{X}c");
+    setup(lRXcv, eRXcv, "/ch{X}cv");
+    setup(lRXwheel, eRXwheel, "/ch{X}wheel");
+    setup(lRXpress, eRXpress, "/ch{X}press");
+
     addAndMakeVisible(lblGui);
     lblGui.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
     setup(lPlay, ePlay, "/play");
@@ -38,34 +70,65 @@ public:
     setup(lTap, eTap, "/tap");
     setup(lOctUp, eOctUp, "/octup");
     setup(lOctDn, eOctDn, "/octdown");
+    setup(lPanic, ePanic, "/panic");
+
+    setup(lMixVol, eMixVol, "/mix/{X}/vol");
+    setup(lMixMute, eMixMute, "/mix/{X}/mute");
+    setup(lArpS, eArpS, "/arp/speed");
+    setup(lArpV, eArpV, "/arp/velocity");
+
+    // Simple Mode setup
+    addAndMakeVisible(eVol1);
+    eVol1.setText("/ch1/vol");
+    addAndMakeVisible(eVol2);
+    eVol2.setText("/ch2/vol");
+
+    setSize(450, 900);
   }
+
   void setup(juce::Label &l, juce::TextEditor &e, juce::String def) {
     addAndMakeVisible(l);
     addAndMakeVisible(e);
     e.setText(def);
   }
+
   void paint(juce::Graphics &g) override {
     g.fillAll(Theme::bgPanel.withAlpha(0.95f));
     g.setColour(Theme::accent);
     g.drawRect(getLocalBounds(), 2);
   }
+
   void resized() override {
     auto r = getLocalBounds().reduced(20);
     lblTitle.setBounds(r.removeFromTop(30));
+
     auto addRow = [&](juce::Label &l, juce::TextEditor &e) {
       auto row = r.removeFromTop(25);
       l.setBounds(row.removeFromLeft(60));
       e.setBounds(row);
       r.removeFromTop(5);
     };
-    addRow(lN, eN);
-    addRow(lV, eV);
-    addRow(lOff, eOff);
-    addRow(lCC, eCC);
-    addRow(lCCV, eCCV);
-    addRow(lP, eP);
-    addRow(lPr, ePr);
+
+    addRow(lTXn, eTXn);
+    addRow(lTXv, eTXv);
+    addRow(lTXoff, eTXoff);
+    addRow(lTXcc, eTXcc);
+    addRow(lTXccv, eTXccv);
+    addRow(lTXp, eTXp);
+    addRow(lTXpr, eTXpr);
+
+    r.removeFromTop(10);
+
+    addRow(lRXn, eRXn);
+    addRow(lRXnv, eRXnv);
+    addRow(lRXnoff, eRXnoff);
+    addRow(lRXc, eRXc);
+    addRow(lRXcv, eRXcv);
+    addRow(lRXwheel, eRXwheel);
+    addRow(lRXpress, eRXpress);
+
     r.removeFromTop(15);
+
     lblGui.setBounds(r.removeFromTop(25));
     addRow(lPlay, ePlay);
     addRow(lStop, eStop);
@@ -74,6 +137,14 @@ public:
     addRow(lTap, eTap);
     addRow(lOctUp, eOctUp);
     addRow(lOctDn, eOctDn);
+    addRow(lPanic, ePanic);
+
+    r.removeFromTop(10);
+
+    addRow(lMixVol, eMixVol);
+    addRow(lMixMute, eMixMute);
+    addRow(lArpS, eArpS);
+    addRow(lArpV, eArpV);
   }
 };
 
@@ -112,6 +183,7 @@ public:
         addAndMakeVisible(button);
       }
     }
+
     void resized() override {
       auto r = getLocalBounds().reduced(2);
       addrBox.setBounds(r.removeFromBottom(20));
@@ -125,7 +197,6 @@ public:
   juce::OwnedArray<GenericControl> controls;
 
   ControlPage() {
-    // Create 4 Sliders and 4 Buttons
     for (int i = 0; i < 4; ++i)
       controls.add(
           new GenericControl(true, "/ctrl/slider/" + juce::String(i + 1)));
@@ -138,13 +209,13 @@ public:
   }
 
   void resized() override {
-    auto r = getLocalBounds().reduced(20);
+    auto r = getLocalBounds().reduced(15, 20);
     auto sliderRow = r.removeFromTop(r.getHeight() / 2);
     int w = r.getWidth() / 4;
 
     for (int i = 0; i < 4; ++i)
-      controls[i]->setBounds(sliderRow.removeFromLeft(w));
+      controls[i]->setBounds(sliderRow.removeFromLeft(w).reduced(4, 0));
     for (int i = 4; i < 8; ++i)
-      controls[i]->setBounds(r.removeFromLeft(w));
+      controls[i]->setBounds(r.removeFromLeft(w).reduced(4, 0));
   }
 };

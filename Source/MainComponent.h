@@ -48,10 +48,9 @@ private:
 
   // GUI
   juce::ImageComponent logoView;
-  juce::TextButton btnDash{"View"}, btnCtrl{"Control"}, btnOscCfg{"OSC"},
-      btnHelp{"Help"};
-  juce::ToggleButton btnRetrigger{"Retrig"}, btnGPU{"GPU"},
-      btnLoopPlaylist{"Loop"};
+  juce::TextButton btnDash{"Dashboard"}, btnCtrl{"Control"},
+      btnOscCfg{"OSC Config"}, btnHelp{"Help"}, btnPanic;
+  juce::ToggleButton btnRetrigger{"Retrig"}, btnGPU{"GPU"};
   juce::Label lblLocalIpHeader, lblLocalIpDisplay, lblTempo, lblLatency,
       lblNoteDelay, lblArp, lblArpBpm, lblArpVel, lblIn, lblOut, lblCh, lblIp,
       lblPOut, lblPIn;
@@ -80,6 +79,7 @@ private:
   MixerContainer mixer;
   juce::Viewport mixerViewport;
   OscAddressConfig oscConfig;
+  juce::Viewport oscViewport;
   ControlPage controlPage;
 
   // Logic
@@ -98,6 +98,8 @@ private:
   std::vector<int> noteArrivalOrder;
   int arpNoteIndex = 0, lastNumPeers = -1, virtualOctaveShift = 0,
       tapCounter = 0, stepSeqIndex = -1, pianoRollOctaveShift = 0;
+  int lockedRollStep = -1;
+  double nextRollBeat = 0.0;
   std::vector<double> tapTimes;
   std::set<int> activeChannels;
   std::vector<std::pair<double, juce::MidiMessage>> noteOffQueue;
@@ -105,10 +107,23 @@ private:
 
   // Sync / Audio State
   bool isWaitingToStart = false;
+  bool hasLinkStartupReset = false;
+  double timeSinceStart = 0.0;
+  double lastProcessedBeat = -1.0;
   double lastPhase = 0.0;
   double lastLookaheadTime = -1.0;
   double currentSampleRate = 44100.0;
   double transportStartBeat = 0.0; // Anchor for relative sync
+  double lastLinkBeat = 0.0;       // For incremental sync
+  double ticksPerQuarterNote = 960.0;
+
+  int linkRetryCounter = 0;
+  bool linkInitialized = false;
+
+  juce::Slider vol1Simple, vol2Simple;
+  juce::TextEditor txtVol1Osc, txtVol2Osc;
+
+  bool pendingSyncStart = false; // Flag for strict bar alignment
 
   struct ActiveNote {
     int channel;
@@ -119,6 +134,7 @@ private:
 
   void updateVisibility();
   void setView(AppView v);
+  void sendPanic();
   void loadMidiFile(juce::File f);
   void stopPlayback();
   void takeSnapshot();

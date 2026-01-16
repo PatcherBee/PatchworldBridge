@@ -7,7 +7,6 @@
 #include "Common.h"
 #include <JuceHeader.h>
 
-
 class TrafficMonitor : public juce::Component, public juce::Timer {
 public:
   juce::TextEditor logDisplay;
@@ -97,20 +96,26 @@ class MidiPlaylist : public juce::Component, public juce::ListBoxModel {
 public:
   juce::ListBox list;
   juce::Label header{{}, "Playlist (.mid)"};
-  juce::TextButton btnClear{"Clear"};
   juce::StringArray files;
   int currentIndex = -1;
+  juce::TextButton btnClear{"CLR"}, btnLoop{"Loop"};
   MidiPlaylist() {
     header.setFont(juce::FontOptions(13.0f).withStyle("Bold"));
     header.setColour(juce::Label::backgroundColourId,
                      Theme::bgPanel.brighter(0.1f));
     addAndMakeVisible(header);
+
     btnClear.onClick = [this] {
       files.clear();
       list.updateContent();
       repaint();
     };
     addAndMakeVisible(btnClear);
+
+    btnLoop.setClickingTogglesState(true);
+    btnLoop.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
+    addAndMakeVisible(btnLoop);
+
     list.setModel(this);
     list.setColour(juce::ListBox::backgroundColourId,
                    juce::Colours::transparentBlack);
@@ -151,11 +156,14 @@ public:
       g.fillAll(Theme::accent.withAlpha(0.3f));
     g.setColour(juce::Colours::white);
     g.setFont(juce::FontOptions(14.0f));
-    g.drawText(files[r], 5, 0, w, h, juce::Justification::centredLeft);
+
+    juce::File f(files[r]);
+    g.drawText(f.getFileName(), 5, 0, w, h, juce::Justification::centredLeft);
   }
   void resized() override {
     auto h = getLocalBounds().removeFromTop(20);
     btnClear.setBounds(h.removeFromRight(40));
+    btnLoop.setBounds(h.removeFromRight(50)); // Beside Clear
     header.setBounds(h);
     list.setBounds(getLocalBounds().withTrimmedTop(20));
   }
