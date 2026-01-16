@@ -1,7 +1,0 @@
-C:/PatchworldBridge/build_debug/JUCE/tools/CMakeFiles/INSTALL.dir
-C:/PatchworldBridge/build_debug/JUCE/tools/CMakeFiles/ALL_BUILD.dir
-C:/PatchworldBridge/build_debug/JUCE/tools/CMakeFiles/ZERO_CHECK.dir
-C:/PatchworldBridge/build_debug/JUCE/tools/modules/CMakeFiles/INSTALL.dir
-C:/PatchworldBridge/build_debug/JUCE/tools/extras/Build/CMakeFiles/INSTALL.dir
-C:/PatchworldBridge/build_debug/JUCE/tools/extras/Build/juceaide/CMakeFiles/juceaide.dir
-C:/PatchworldBridge/build_debug/JUCE/tools/extras/Build/juceaide/CMakeFiles/INSTALL.dir
