@@ -1,0 +1,24 @@
+^C:\PATCHWORLDBRIDGE\BUILD_DEBUG\CMAKEFILES\C3AF5300FC0EDBEB755C74C6267C984C\BINARYDATA1.CPP.RULE
+setlocal
+cd C:\PatchworldBridge
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+C:\PatchworldBridge\build_debug\JUCE\tools\extras\Build\juceaide\juceaide_artefacts\Custom\juceaide.exe binarydata BinaryData BinaryData.h C:/PatchworldBridge/build_debug/juce_binarydata_BinaryAssets/JuceLibraryCode C:/PatchworldBridge/build_debug/juce_binarydata_BinaryAssets/JuceLibraryCode/input_file_list
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\PATCHWORLDBRIDGE\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/PatchworldBridge -BC:/PatchworldBridge/build_debug --check-stamp-file C:/PatchworldBridge/build_debug/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

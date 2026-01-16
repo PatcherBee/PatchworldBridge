@@ -15,6 +15,11 @@ target_include_directories(AbletonLink INTERFACE
     "link/include"
     "link/modules/asio-standalone/asio/include"
 )
+target_compile_definitions(AbletonLink INTERFACE 
+    ASIO_STANDALONE 
+    LINK_PLATFORM_WINDOWS
+    _WIN32_WINNT=0x0A00
+)
 
 # 3. Create the App
 juce_add_gui_app(PatchworldBridge

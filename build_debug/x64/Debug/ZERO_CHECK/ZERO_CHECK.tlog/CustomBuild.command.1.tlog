@@ -1,0 +1,10 @@
+^C:\PATCHWORLDBRIDGE\BUILD_DEBUG\CMAKEFILES\915B65D740D4B811C9F9518129A8A472\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/PatchworldBridge -BC:/PatchworldBridge/build_debug --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/PatchworldBridge/build_debug/PatchworldBridge.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

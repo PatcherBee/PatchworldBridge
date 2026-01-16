@@ -1,0 +1,475 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="MinSizeRel|x64">
+      <Configuration>MinSizeRel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="RelWithDebInfo|x64">
+      <Configuration>RelWithDebInfo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{1C1E765D-EB39-3435-904F-F1F5C786BCB6}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <Platform>x64</Platform>
+    <ProjectName>PatchworldBridge</ProjectName>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v145</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">PatchworldBridge.dir\Debug\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Patchworld MIDI OSC Bridge</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">PatchworldBridge.dir\Release\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Patchworld MIDI OSC Bridge</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\MinSizeRel\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">PatchworldBridge.dir\MinSizeRel\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Patchworld MIDI OSC Bridge</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\RelWithDebInfo\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">PatchworldBridge.dir\RelWithDebInfo\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Patchworld MIDI OSC Bridge</TargetName>
+    <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
+    <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>Disabled</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;DEBUG=1;_DEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR="Debug"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;DEBUG=1;_DEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Debug\BinaryAssets.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/Debug/Patchworld MIDI OSC Bridge.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/Debug/Patchworld MIDI OSC Bridge.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;NDEBUG=1;_NDEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR="Release"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;NDEBUG=1;_NDEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>Release\BinaryAssets.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/Release/Patchworld MIDI OSC Bridge.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/Release/Patchworld MIDI OSC Bridge.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MinSpace</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;NDEBUG=1;_NDEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR="MinSizeRel"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <DebugInformationFormat>
+      </DebugInformationFormat>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;NDEBUG=1;_NDEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>MinSizeRel\BinaryAssets.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/MinSizeRel/Patchworld MIDI OSC Bridge.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/MinSizeRel/Patchworld MIDI OSC Bridge.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /bigobj</AdditionalOptions>
+      <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <BufferSecurityCheck></BufferSecurityCheck>
+      <CallingConvention></CallingConvention>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <FloatingPointModel></FloatingPointModel>
+      <ForceConformanceInForLoopScope></ForceConformanceInForLoopScope>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <MinimalRebuild></MinimalRebuild>
+      <Optimization>MaxSpeed</Optimization>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RemoveUnreferencedCodeData></RemoveUnreferencedCodeData>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SupportJustMyCode></SupportJustMyCode>
+      <TreatWChar_tAsBuiltInType></TreatWChar_tAsBuiltInType>
+      <UseFullPaths>false</UseFullPaths>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;NDEBUG=1;_NDEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR="RelWithDebInfo"</PreprocessorDefinitions>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <ScanSourceForModuleDependencies>false</ScanSourceForModuleDependencies>
+    </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;JUCE_STANDALONE_APPLICATION=1;JUCE_GUI_APP=1;JUCE_WINDOWS=1;LINK_PLATFORM_WINDOWS=1;_WIN32_WINNT=0x0601;JUCE_MODULE_AVAILABLE_juce_gui_extra=1;JUCE_MODULE_AVAILABLE_juce_gui_basics=1;JUCE_MODULE_AVAILABLE_juce_graphics=1;JUCE_MODULE_AVAILABLE_juce_events=1;JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1;NDEBUG=1;_NDEBUG=1;JUCE_MODULE_AVAILABLE_juce_core=1;JUCE_MODULE_AVAILABLE_juce_data_structures=1;JUCE_MODULE_AVAILABLE_juce_osc=1;JUCE_MODULE_AVAILABLE_juce_audio_basics=1;JUCE_MODULE_AVAILABLE_juce_audio_devices=1;JUCE_MODULE_AVAILABLE_juce_audio_formats=1;JUCE_MODULE_AVAILABLE_juce_audio_processors=1;JUCE_MODULE_AVAILABLE_juce_audio_processors_headless=1;JUCE_MODULE_AVAILABLE_juce_audio_utils=1;JUCE_MODULE_AVAILABLE_juce_opengl=1;JUCE_TARGET_HAS_BINARY_DATA=1;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+    <Midl>
+      <AdditionalIncludeDirectories>C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode;C:\PatchworldBridge\Source;C:\PatchworldBridge\link\include;C:\PatchworldBridge\link\modules\asio-standalone\asio\include;C:\PatchworldBridge\JUCE\modules;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\VST3_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lv2;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\serd;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sord\src;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\sratom;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv;C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\format_types\LV2_SDK\lilv\src;C:\PatchworldBridge\build_debug\juce_binarydata_BinaryAssets\JuceLibraryCode;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
+      <HeaderFileName>%(Filename).h</HeaderFileName>
+      <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
+      <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
+      <ProxyFileName>%(Filename)_p.c</ProxyFileName>
+    </Midl>
+    <Link>
+      <AdditionalDependencies>RelWithDebInfo\BinaryAssets.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_extra/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_gui_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_graphics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_events/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_core/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_data_structures/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_osc/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_basics/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_devices/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_formats/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_processors_headless/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_audio_utils/libs/VisualStudio2026/x64/MDd/$(Configuration);C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd;C:/PatchworldBridge/JUCE/modules/juce_opengl/libs/VisualStudio2026/x64/MDd/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
+      <DataExecutionPrevention></DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
+      <ImportLibrary>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/RelWithDebInfo/Patchworld MIDI OSC Bridge.lib</ImportLibrary>
+      <LinkErrorReporting></LinkErrorReporting>
+      <ProgramDataBaseFile>C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/RelWithDebInfo/Patchworld MIDI OSC Bridge.pdb</ProgramDataBaseFile>
+      <RandomizedBaseAddress></RandomizedBaseAddress>
+      <SubSystem>Windows</SubSystem>
+    </Link>
+    <ProjectReference>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\PatchworldBridge\build_debug\CMakeFiles\96f37a183baa9c58bea601d50a00aa61\JuceHeader.h.rule">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generating PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+JUCE\tools\extras\Build\juceaide\juceaide_artefacts\Custom\juceaide.exe header C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/Debug/Defs.txt C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\Debug\Defs.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\JuceHeader.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generating PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+JUCE\tools\extras\Build\juceaide\juceaide_artefacts\Custom\juceaide.exe header C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/Release/Defs.txt C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\Release\Defs.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\JuceHeader.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Generating PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+JUCE\tools\extras\Build\juceaide\juceaide_artefacts\Custom\juceaide.exe header C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/MinSizeRel/Defs.txt C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\MinSizeRel\Defs.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\JuceHeader.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Generating PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+JUCE\tools\extras\Build\juceaide\juceaide_artefacts\Custom\juceaide.exe header C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/RelWithDebInfo/Defs.txt C:/PatchworldBridge/build_debug/PatchworldBridge_artefacts/JuceLibraryCode/JuceHeader.h
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\RelWithDebInfo\Defs.txt;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\JuceHeader.h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\PatchworldBridge\CMakeLists.txt">
+      <UseUtf8Encoding>Always</UseUtf8Encoding>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Building Custom Rule C:/PatchworldBridge/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/PatchworldBridge -BC:/PatchworldBridge/build_debug --check-stamp-file C:/PatchworldBridge/build_debug/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCXXCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeRCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeSystem.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\cmake.verify_globs;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\WindowsPaths.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Building Custom Rule C:/PatchworldBridge/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/PatchworldBridge -BC:/PatchworldBridge/build_debug --check-stamp-file C:/PatchworldBridge/build_debug/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCXXCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeRCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeSystem.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\cmake.verify_globs;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\WindowsPaths.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Building Custom Rule C:/PatchworldBridge/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/PatchworldBridge -BC:/PatchworldBridge/build_debug --check-stamp-file C:/PatchworldBridge/build_debug/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCXXCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeRCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeSystem.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\cmake.verify_globs;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\WindowsPaths.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkObjects>
+      <Message Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Building Custom Rule C:/PatchworldBridge/CMakeLists.txt</Message>
+      <Command Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/PatchworldBridge -BC:/PatchworldBridge/build_debug --check-stamp-file C:/PatchworldBridge/build_debug/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeCXXCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeRCCompiler.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\4.2.1\CMakeSystem.cmake;C:\PatchworldBridge\build_debug\CMakeFiles\cmake.verify_globs;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCXXInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeCommonLanguageInclude.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeGenericSystem.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeInitializeConfigs.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeLanguageInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeRCInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\CMakeSystemSpecificInitialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\CMakeCommonCompilerMacros.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Compiler\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCXXLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Internal\CMakeCommonLinkerInformation.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Linker\MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Linker\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-Initialize.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-C.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC-CXX.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows-MSVC.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\Windows.cmake;C:\Program Files\CMake\share\cmake-4.2\Modules\Platform\WindowsPaths.cmake;%(AdditionalInputs)</AdditionalInputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\PatchworldBridge\build_debug\CMakeFiles\generate.stamp</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="C:\PatchworldBridge\Source\Main.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\Source\MainComponent.cpp" />
+    <ClInclude Include="C:\PatchworldBridge\Source\MainComponent.h" />
+    <ClInclude Include="C:\PatchworldBridge\Source\SubComponents.h" />
+    <ClInclude Include="C:\PatchworldBridge\build_debug\PatchworldBridge_artefacts\JuceLibraryCode\JuceHeader.h" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_gui_extra\juce_gui_extra.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_gui_basics\juce_gui_basics.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_graphics\juce_graphics.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_graphics\juce_graphics_Harfbuzz.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_graphics\juce_graphics_Sheenbidi.c" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_events\juce_events.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_core\juce_core.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_core\juce_core_CompilationTime.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_data_structures\juce_data_structures.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_osc\juce_osc.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_basics\juce_audio_basics.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_devices\juce_audio_devices.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_formats\juce_audio_formats.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_processors\juce_audio_processors.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\juce_audio_processors_headless.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\juce_audio_processors_headless_ara.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_processors_headless\juce_audio_processors_headless_lv2_libs.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_audio_utils\juce_audio_utils.cpp" />
+    <ClCompile Include="C:\PatchworldBridge\JUCE\modules\juce_opengl\juce_opengl.cpp" />
+    <Object Include="C:\PatchworldBridge\build_debug\PatchworldBridge_rc_lib.dir\$(Configuration)\PatchworldBridge_resources.res" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="C:\PatchworldBridge\build_debug\ZERO_CHECK.vcxproj">
+      <Project>{BE926D37-923C-3D6D-998F-E81011CEAAD4}</Project>
+      <Name>ZERO_CHECK</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+    <ProjectReference Include="C:\PatchworldBridge\build_debug\BinaryAssets.vcxproj">
+      <Project>{2FA6FBAC-A2D8-3C70-BCEB-29DFD93F664F}</Project>
+      <Name>BinaryAssets</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\PatchworldBridge\build_debug\PatchworldBridge_rc_lib.vcxproj">
+      <Project>{FFED6391-9AC1-3FA6-8337-5DFB1D8575EF}</Project>
+      <Name>PatchworldBridge_rc_lib</Name>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

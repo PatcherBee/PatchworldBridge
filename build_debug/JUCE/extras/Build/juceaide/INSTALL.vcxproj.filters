@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\PatchworldBridge\build_debug\CMakeFiles\e9ddb05c271a52d140b375787138bd12\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{DC63BC4F-2138-3E36-997B-2F8AF20EE6FE}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

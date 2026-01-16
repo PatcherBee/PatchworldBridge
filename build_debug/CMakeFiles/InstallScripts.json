@@ -1,0 +1,11 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/PatchworldBridge/build_debug/cmake_install.cmake",
+		"C:/PatchworldBridge/build_debug/JUCE/cmake_install.cmake",
+		"C:/PatchworldBridge/build_debug/JUCE/modules/cmake_install.cmake",
+		"C:/PatchworldBridge/build_debug/JUCE/extras/Build/cmake_install.cmake",
+		"C:/PatchworldBridge/build_debug/JUCE/extras/Build/juceaide/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
