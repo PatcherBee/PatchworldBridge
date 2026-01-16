@@ -1,24 +1,41 @@
-# --- CMake & Build Artifacts ---
-/out/
-/build/
-/bin/
-/obj/
+# --- CMake / Build Output ---
+build/
+bin/
+cmake-build-debug/
+cmake-build-release/
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+_CPack_Packages/
+CPackConfig.cmake
+CPackSourceConfig.cmake
 
-# --- Visual Studio Specific ---
-/.vs/
-/*.sln
-/*.vcxproj
-/*.filters
-/*.user
-*.pdb
-*.ilk
-*.exe
-*.lib
+# --- Visual Studio ---
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.db
+*.opendb
+x64/
+Win32/
+Release/
+Debug/
+*.sdf
+*.opensdf
 
 # --- JUCE Specific ---
-/JuceLibraryCode/
-/Builds/
+/JUCE/
+# (Note: Only ignore JUCE if you are using it as a submodule. 
+# Git will handle the submodule link automatically.)
 
 # --- OS Specific ---
 .DS_Store
 Thumbs.db
+
+# --- Patchworld Bridge Specific ---
+# Exclude actual MIDI exports or local test recordings if needed
+*.wav
+*.aif

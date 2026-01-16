@@ -148,6 +148,8 @@ MainComponent::MainComponent()
     else
       setView(v);
   };
+  addAndMakeVisible(btnCtrl);
+  btnCtrl.onClick = [this, toggleView] { toggleView(AppView::Control); };
   addAndMakeVisible(btnOscCfg);
   btnOscCfg.onClick = [this, toggleView] { toggleView(AppView::OSC_Config); };
   addAndMakeVisible(btnHelp);
@@ -407,6 +409,22 @@ MainComponent::MainComponent()
       oscSender.send(addr, active ? 1.0f : 0.0f);
     }
   };
+
+  addChildComponent(controlPage);
+  for (auto *c : controlPage.controls) {
+    c->onAction = [this](juce::String addr, float val) {
+      if (isOscConnected)
+        oscSender.send(addr, val);
+
+      // Also send as generic MIDI CC if it's a slider
+      if (c->isSlider) {
+        auto m = juce::MidiMessage::controllerEvent(getSelectedChannel(), 12,
+                                                    (int)(val * 127.0f));
+        if (midiOutput)
+          midiOutput->sendMessageNow(m);
+      }
+    };
+  }
 
   addChildComponent(oscConfig);
   addChildComponent(helpText);
@@ -724,21 +742,23 @@ void MainComponent::hiResTimerCallback() {
 
   if (isPlaying && link->isEnabled()) {
     if (session.isPlaying()) {
-      // Absolute Beat Sync Logic
       double beats = session.beatAtTime(futureTime, quantum);
+
+      // Calculate beat-based transport position
+      // Current transport time is in seconds, mf.convertTimestampTicksToSeconds
+      // was used We need to map beats to seconds based on the current BPM
       double secondsPerBeat = 60.0 / linkBpm;
+      double targetTransportTime = beats * secondsPerBeat;
 
-      double dt = 0.001;
-      if (link->isEnabled()) {
-        dt = 0.001 * (linkBpm / 120.0);
-      }
-
-      double limitTime = currentTransportTime + dt + (latencyVal / 1000.0);
+      // If we are significantly off, snap transport (e.g. on start or large
+      // jump)
+      if (std::abs(targetTransportTime - currentTransportTime) > 0.5)
+        currentTransportTime = targetTransportTime;
 
       juce::ScopedLock sl(midiLock);
       while (playbackCursor < playbackSeq.getNumEvents()) {
         auto *ev = playbackSeq.getEventPointer(playbackCursor);
-        if (ev->message.getTimeStamp() > limitTime)
+        if (ev->message.getTimeStamp() > targetTransportTime)
           break;
 
         int ch = ev->message.getChannel();
@@ -763,13 +783,30 @@ void MainComponent::hiResTimerCallback() {
 
         playbackCursor++;
       }
-      currentTransportTime += dt;
+
+      // Smoothly advance transport, but keep it tethered to Link beats
+      currentTransportTime = targetTransportTime;
+
+      // Loop sequence if end reached
+      if (playbackCursor >= playbackSeq.getNumEvents() && sequenceLength > 0) {
+        if (btnLoopPlaylist.getToggleState()) {
+          playbackCursor = 0;
+          // To handle Link sync on loop, we'd ideally use
+          // session.setIsPlayingAndRequestBeatAtTime(true, now, 0, quantum) but
+          // for now just resetting the cursor is a start.
+        } else {
+          isPlaying = false;
+        }
+      }
     }
   } else if (link->isEnabled() && session.isPlaying() && !isPlaying) {
     // Wait for quantum start
     double phase = session.phaseAtTime(futureTime, quantum);
-    if (phase < 0.1)
+    if (phase < 0.1) {
       isPlaying = true;
+      currentTransportTime = 0;
+      playbackCursor = 0;
+    }
   }
 
   // VISUALS
@@ -911,7 +948,8 @@ void MainComponent::updateVisibility() {
   lblLatency.setVisible(isDash);
 
   bool isOverlay =
-      (currentView == AppView::OSC_Config || currentView == AppView::Help);
+      (currentView == AppView::OSC_Config || currentView == AppView::Help ||
+       currentView == AppView::Control);
   if (isOverlay) {
     horizontalKeyboard.setVisible(false);
     verticalKeyboard.setVisible(false);
@@ -935,6 +973,7 @@ void MainComponent::updateVisibility() {
   }
   oscConfig.setVisible(currentView == AppView::OSC_Config);
   helpText.setVisible(currentView == AppView::Help);
+  controlPage.setVisible(currentView == AppView::Control);
 }
 
 void MainComponent::resized() {
@@ -960,6 +999,11 @@ void MainComponent::resized() {
   }
   if (currentView == AppView::Help) {
     helpText.setBounds(
+        getLocalBounds().withSizeKeepingCentre(isSimpleMode ? 420 : 600, 500));
+    return;
+  }
+  if (currentView == AppView::Control) {
+    controlPage.setBounds(
         getLocalBounds().withSizeKeepingCentre(isSimpleMode ? 420 : 600, 500));
     return;
   }
@@ -1173,4 +1217,3 @@ void MainComponent::getNextAudioBlock(
 }
 
 void MainComponent::releaseResources() {}
-

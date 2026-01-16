@@ -15,11 +15,18 @@ target_include_directories(AbletonLink INTERFACE
     "link/include"
     "link/modules/asio-standalone/asio/include"
 )
-target_compile_definitions(AbletonLink INTERFACE 
-    ASIO_STANDALONE 
-    LINK_PLATFORM_WINDOWS
-    _WIN32_WINNT=0x0A00
-)
+if(WIN32)
+    target_compile_definitions(AbletonLink INTERFACE 
+        ASIO_STANDALONE 
+        LINK_PLATFORM_WINDOWS
+        _WIN32_WINNT=0x0A00
+    )
+elseif(APPLE)
+    target_compile_definitions(AbletonLink INTERFACE 
+        ASIO_STANDALONE 
+        LINK_PLATFORM_MACOSX
+    )
+endif()
 
 # 3. Create the App
 juce_add_gui_app(PatchworldBridge
@@ -63,6 +70,10 @@ target_link_libraries(PatchworldBridge PRIVATE
     juce::juce_opengl)
 
 # 7. Binary Data (Matches BinaryData::logo_png in MainComponent.cpp)
+if(WIN32)
+    target_link_libraries(PatchworldBridge PRIVATE ws2_32 iphlpapi)
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/logo.png")
     juce_add_binary_data(BinaryData SOURCES logo.png)
     target_link_libraries(PatchworldBridge PRIVATE BinaryData)
