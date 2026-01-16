@@ -60,12 +60,12 @@ private:
   juce::TextEditor edIp, edPOut, edPIn, helpText;
   juce::TextButton btnConnect{"Connect"}, btnPlay{"Play"}, btnStop{"Stop"},
       btnPrev{"<"}, btnSkip{">"}, btnResetFile{"Rst"}, btnClearPR{"Clr"},
-      btnResetBPM{"Set"}, btnTapTempo{"Tap Tempo"}, btnPrOctUp{"Oct +"},
+      btnResetBPM{"Reset BPM"}, btnTapTempo{"Tap Tempo"}, btnPrOctUp{"Oct +"},
       btnPrOctDown{"Oct -"};
   juce::Slider tempoSlider, latencySlider, sliderNoteDelay, sliderArpSpeed,
       sliderArpVel;
   juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern;
-  juce::ToggleButton btnLinkToggle{"Link"}, btnArp{"Arp"}, btnArpSync{"Sync"};
+  juce::ToggleButton btnLinkToggle{"Link"}, btnArp{"Latch"}, btnArpSync{"Sync"};
 
   ConnectionLight ledConnect;
   PhaseVisualizer phaseVisualizer;
@@ -108,6 +108,14 @@ private:
   double lastPhase = 0.0;
   double lastLookaheadTime = -1.0;
   double currentSampleRate = 44100.0;
+  double transportStartBeat = 0.0; // Anchor for relative sync
+
+  struct ActiveNote {
+    int channel;
+    int note;
+    double releaseTime;
+  };
+  std::vector<ActiveNote> activeVirtualNotes;
 
   void updateVisibility();
   void setView(AppView v);

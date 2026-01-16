@@ -7,13 +7,14 @@
 #include "Common.h"
 #include <JuceHeader.h>
 
-
 class StepSequencer : public juce::Component {
 public:
+  juce::TextButton btnRoll4{"1/4"}, btnRoll8{"1/8"}, btnRoll16{"1/16"},
+      btnRoll32{"1/32"};
+  int activeRollDiv = 0; // 0 = off, 4, 8, 16, 32
+  juce::Slider noteSlider;
   juce::ComboBox cmbSteps, cmbRate;
   juce::Label lblTitle{{}, "Sequencer"};
-  juce::Slider noteSlider;
-  juce::Label lblNote{{}, "Root:"};
   juce::OwnedArray<juce::ToggleButton> stepButtons;
   int numSteps = 16, currentStep = -1;
   juce::TextButton btnClear{"Clear"};
@@ -21,12 +22,16 @@ public:
   StepSequencer() {
     addAndMakeVisible(lblTitle);
     lblTitle.setFont(juce::FontOptions(12.0f).withStyle("Bold"));
+
+    // Steps Combo
     addAndMakeVisible(cmbSteps);
     cmbSteps.addItemList({"4", "8", "12", "16"}, 1);
     cmbSteps.setSelectedId(4, juce::dontSendNotification);
     cmbSteps.onChange = [this] {
       rebuildSteps(cmbSteps.getText().getIntValue());
     };
+
+    // Rate Combo
     addAndMakeVisible(cmbRate);
     cmbRate.addItem("1/1", 1);
     cmbRate.addItem("1/2", 2);
@@ -36,18 +41,33 @@ public:
     cmbRate.addItem("1/32", 6);
     cmbRate.setSelectedId(5, juce::dontSendNotification);
 
+    // Roll Buttons
+    auto setupRoll = [&](juce::TextButton &b, int div) {
+      b.setClickingTogglesState(true);
+      b.setRadioGroupId(101);
+      b.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
+      b.onClick = [this, div, &b] {
+        if (b.getToggleState())
+          activeRollDiv = div;
+        else if (activeRollDiv == div)
+          activeRollDiv = 0;
+      };
+      addAndMakeVisible(b);
+    };
+    setupRoll(btnRoll4, 4);
+    setupRoll(btnRoll8, 8);
+    setupRoll(btnRoll16, 16);
+    setupRoll(btnRoll32, 32);
+
+    // Root Note Slider (Label Removed)
     addAndMakeVisible(noteSlider);
     noteSlider.setRange(36, 72, 1);
     noteSlider.setSliderStyle(juce::Slider::LinearHorizontal);
     noteSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
-
     noteSlider.textFromValueFunction = [](double value) {
       return juce::MidiMessage::getMidiNoteName((int)value, true, true, 3);
     };
     noteSlider.setValue(60, juce::sendNotificationSync);
-
-    addAndMakeVisible(lblNote);
-    lblNote.setJustificationType(juce::Justification::centredRight);
 
     addAndMakeVisible(btnClear);
     btnClear.onClick = [this] {
@@ -57,6 +77,7 @@ public:
 
     rebuildSteps(16);
   }
+
   void rebuildSteps(int count) {
     numSteps = count;
     stepButtons.clear();
@@ -89,16 +110,28 @@ public:
                  (float)(getHeight() - 30));
     }
   }
+
   void resized() override {
     auto r = getLocalBounds().reduced(2);
     auto head = r.removeFromTop(30);
+
     btnClear.setBounds(head.removeFromRight(50).reduced(2));
+
     lblTitle.setBounds(head.removeFromLeft(70));
-    cmbSteps.setBounds(head.removeFromLeft(60));
-    cmbRate.setBounds(head.removeFromLeft(70));
+    cmbSteps.setBounds(head.removeFromLeft(50));
+    cmbRate.setBounds(head.removeFromLeft(60));
     head.removeFromLeft(10);
-    lblNote.setBounds(head.removeFromLeft(40));
-    noteSlider.setBounds(head.removeFromLeft(100));
+
+    // Roll Buttons
+    btnRoll4.setBounds(head.removeFromLeft(35).reduced(1));
+    btnRoll8.setBounds(head.removeFromLeft(35).reduced(1));
+    btnRoll16.setBounds(head.removeFromLeft(35).reduced(1));
+    btnRoll32.setBounds(head.removeFromLeft(35).reduced(1));
+
+    head.removeFromLeft(10);
+    // Note slider takes remaining
+    noteSlider.setBounds(head.reduced(2));
+
     if (numSteps > 0) {
       float w = (float)r.getWidth() / numSteps;
       for (int i = 0; i < numSteps; ++i)

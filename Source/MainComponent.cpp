@@ -1,7 +1,9 @@
 #include "MainComponent.h"
 #include <JuceHeader.h>
 #include <ableton/Link.hpp>
+#include <algorithm>
 #include <cmath>
+#include <functional>
 
 MainComponent::~MainComponent() {
   if (link != nullptr) {
@@ -171,6 +173,23 @@ MainComponent::MainComponent()
   edIp.setText("127.0.0.1");
   lblIp.setJustificationType(juce::Justification::centredRight);
   edIp.setJustification(juce::Justification::centred);
+  addAndMakeVisible(lblLocalIpHeader);
+  lblLocalIpHeader.setText("My IP:", juce::dontSendNotification);
+  lblLocalIpHeader.setJustificationType(juce::Justification::centredRight);
+  addAndMakeVisible(lblLocalIpDisplay);
+
+  // Logic to find first non-loopback IPv4
+  juce::String localIp = "127.0.0.1";
+  auto ips = juce::IPAddress::getAllAddresses();
+  for (auto &ip : ips) {
+    if (!ip.toString().startsWith("127.") && !ip.toString().contains(":")) {
+      localIp = ip.toString();
+      break;
+    }
+  }
+  lblLocalIpDisplay.setText(localIp, juce::dontSendNotification);
+  lblLocalIpDisplay.setJustificationType(juce::Justification::centredLeft);
+
   addAndMakeVisible(lblPOut);
   addAndMakeVisible(edPOut);
   edPOut.setText("3330");
@@ -285,10 +304,18 @@ MainComponent::MainComponent()
   lblTempo.setText("BPM:", juce::dontSendNotification);
   addAndMakeVisible(btnResetBPM);
   btnResetBPM.onClick = [this] {
-    double target = (currentFileBpm > 0.0) ? currentFileBpm : 120.0;
+    // If no file loaded (sequenceLength == 0), default to 120. Else file BPM.
+    double target = 120.0;
+    if (sequenceLength > 0 && currentFileBpm > 0.0) {
+      target = currentFileBpm;
+    }
+
+    // Reset Link Tempo
     auto state = link->captureAppSessionState();
     state.setTempo(target, link->clock().micros());
     link->commitAppSessionState(state);
+
+    // Update Slider
     parameters.setProperty("bpm", target, nullptr);
     grabKeyboardFocus();
   };
@@ -398,11 +425,35 @@ MainComponent::MainComponent()
   cmbArpPattern.addItem("Diverge", 4);
   cmbArpPattern.setSelectedId(1);
 
+  btnArp.onClick = [this] {
+    if (!btnArp.getToggleState()) {
+      heldNotes.clear();
+      noteArrivalOrder.clear();
+    }
+  };
+
   mixer.onMixerActivity = [this](int ch, float val) {
     sendSplitOscMessage(juce::MidiMessage::controllerEvent(ch, 7, (int)val));
   };
   mixer.onChannelToggle = [this](int ch, bool active) {
     toggleChannel(ch, active);
+
+    // Send MIDI CC (127 = ON, 0 = OFF)
+    if (midiOutput) {
+      // Using CC 12 for "Effect Control 1" or generic, user asked for "assigned
+      // to on/off switches". User list says: "0-63=off, 64-127=on". Let's use
+      // CC 64 (Sustain) or just a generic one? User mentioned "Mixer Channel
+      // faders send /ch{X}cc, 'ON' buttons send /ch{X}cc (1)". In MIDI, "ON"
+      // buttons usually map to Mute/Solo or just a generic CC. Since
+      // `toggleChannel` implies activation, let's treat it as Mute/Enable. I
+      // will use CC 12 (Effect Control 1) as prior code did, or maybe CC 7
+      // (Volume) if it was fader? Prior code for fader used CC 7. For Toggle,
+      // let's use CC 12 for now or as requested "Mixer's On toggles need to
+      // send osc/midi messages also". I'll send CC 12 with 127/0.
+      midiOutput->sendMessageNow(
+          juce::MidiMessage::controllerEvent(ch, 12, active ? 127 : 0));
+    }
+
     if (isOscConnected) {
       juce::String addr =
           oscConfig.eCC.getText().replace("{X}", juce::String(ch));
@@ -412,7 +463,7 @@ MainComponent::MainComponent()
 
   addChildComponent(controlPage);
   for (auto *c : controlPage.controls) {
-    c->onAction = [this](juce::String addr, float val) {
+    c->onAction = [this, c](juce::String addr, float val) {
       if (isOscConnected)
         oscSender.send(addr, val);
 
@@ -591,6 +642,69 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
   if (m.size() > 0 && (m[0].isFloat32() || m[0].isInt32()))
     val = m[0].isFloat32() ? m[0].getFloat32() : (float)m[0].getInt32();
 
+  // GENERAL PARSER for /ch{X}...
+  // Support: /chXnoteoff (Arg1=Note)
+  //          /chXcc (Arg1=CC Num, Arg2=Val)
+  //          /chXccvalue (Arg1=Val, implies generic CC 1?)
+  //          /chXpitch (Arg1=Val)
+  //          /chXpressure (Arg1=Val)
+
+  if (addr.startsWith("/ch")) {
+    // Extract Channel
+    int chIdx = -1;
+    int digitEnd = 3;
+    // Find where digits end
+    while (digitEnd < addr.length() &&
+           juce::CharacterFunctions::isDigit(addr[digitEnd]))
+      digitEnd++;
+
+    if (digitEnd > 3) {
+      chIdx = addr.substring(3, digitEnd).getIntValue();
+      juce::String suffix = addr.substring(digitEnd); // e.g. "noteoff", "cc"
+
+      if (chIdx > 0 && chIdx <= 16 && midiOutput) {
+        if (suffix == "noteoff") {
+          int note = m.size() > 0 ? (m[0].isFloat32() ? (int)m[0].getFloat32()
+                                                      : m[0].getInt32())
+                                  : 60;
+          midiOutput->sendMessageNow(juce::MidiMessage::noteOff(chIdx, note));
+        } else if (suffix == "cc") {
+          int ccNum = m.size() > 0 ? (m[0].isFloat32() ? (int)m[0].getFloat32()
+                                                       : m[0].getInt32())
+                                   : 1;
+          int ccVal = m.size() > 1 ? (m[1].isFloat32() ? (int)m[1].getFloat32()
+                                                       : m[1].getInt32())
+                                   : 127;
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::controllerEvent(chIdx, ccNum, ccVal));
+        } else if (suffix == "ccvalue") {
+          // User said "/chXccvalue (CC Value) <Knob/Slider position>"
+          // Implies mapped to a specific CC? Let's assume CC 1 (Mod) or CC 74
+          // (Cutoff) or user defined? I'll default to CC 1 (Modulation) as a
+          // safe generic, or CC 12 (Effect)
+          int val = m.size() > 0 ? (m[0].isFloat32() ? (int)m[0].getFloat32()
+                                                     : m[0].getInt32())
+                                 : 0;
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::controllerEvent(chIdx, 1, val));
+        } else if (suffix == "pitch") {
+          // Pitch wheel 0-16383. Input likely 0-127 or 0.0-1.0 or -1.0 to 1.0?
+          // Let's assume input is 0-16383 raw or scale it?
+          // Standard for simple sliders is 0-127. Let's map 0-127 to 0-16383
+          float input = val; // Captured earlier
+          int pitchVal =
+              juce::jlimit(0, 16383, (int)((input / 127.0f) * 16383.0f));
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::pitchWheel(chIdx, pitchVal));
+        } else if (suffix == "pressure") {
+          int pVal = (int)val;
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::channelPressureChange(chIdx, pVal));
+        }
+      }
+    }
+  }
+
   int ch = matchOscChannel(oscConfig.eN.getText(), addr);
   if (ch > 0) {
     float velocity =
@@ -600,6 +714,12 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
     if (midiOutput)
       midiOutput->sendMessageNow(noteOn);
 
+    // LOG IT
+    juce::MessageManager::callAsync([this, ch, noteNum] {
+      logPanel.log("MIDI Tx: Ch" + juce::String(ch) + " NoteOn " +
+                   juce::String(noteNum));
+    });
+
     // Calculate Duration: Slider Base + Velocity Interpolation
     // Formula: Base + ((Vel - 64) * 5)
     // 0ms min
@@ -608,13 +728,6 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
     double duration = std::max(10.0, base + extra);
 
     // Schedule Note Off
-    juce::MidiMessage noteOff = juce::MidiMessage::noteOff(ch, noteNum);
-
-    // We can't schedule straightforwardly without a proper timed sequence loop
-    // here unless we use a timer or just use the system time if we are
-    // immediate. However, the request was "hold note before note off message is
-    // sent". For now, simpler: Send NoteOn, then use a delayed lambda.
-
     juce::Timer::callAfterDelay((int)duration, [this, ch, noteNum] {
       if (midiOutput) {
         juce::MidiMessage off = juce::MidiMessage::noteOff(ch, noteNum);
@@ -689,12 +802,18 @@ void MainComponent::handleNoteOn(juce::MidiKeyboardState *, int ch, int note,
     handleNoteOff(nullptr, ch, note, 0.0f);
     return;
   }
+
+  // Calculate adj/act
   int adj = juce::jlimit(0, 127, note + (virtualOctaveShift * 12));
   int act = (cmbMidiCh.getSelectedId() == 17) ? ch : cmbMidiCh.getSelectedId();
   if (act <= 0)
     act = 1;
 
   // KEYBOARD INPUT GOES TO ARP
+  // Only accept if Virtual Keyboard is selected
+  if (cmbMidiIn.getSelectedId() != 1)
+    return;
+
   if (btnArp.getToggleState()) {
     heldNotes.add(adj);
     noteArrivalOrder.push_back(adj);
@@ -703,8 +822,14 @@ void MainComponent::handleNoteOn(juce::MidiKeyboardState *, int ch, int note,
     sendSplitOscMessage(m);
     if (midiOutput)
       midiOutput->sendMessageNow(m);
+
+    // Auto Note Off for Virtual Keyboard
+    double duration = 0.1 + (vel * 2.0); // Seconds
+    double releaseTime =
+        (juce::Time::getMillisecondCounterHiRes() / 1000.0) + duration;
+    activeVirtualNotes.push_back({act, adj, releaseTime});
   }
-}
+} // End handleNoteOn
 
 void MainComponent::handleNoteOff(juce::MidiKeyboardState *, int ch, int note,
                                   float vel) {
@@ -744,15 +869,28 @@ void MainComponent::hiResTimerCallback() {
     if (session.isPlaying()) {
       double beats = session.beatAtTime(futureTime, quantum);
 
-      // Calculate beat-based transport position
-      // Current transport time is in seconds, mf.convertTimestampTicksToSeconds
-      // was used We need to map beats to seconds based on the current BPM
-      double secondsPerBeat = 60.0 / linkBpm;
-      double targetTransportTime = beats * secondsPerBeat;
+      // RELATIVE SYNC ANCHOR LOGIC
+      // If we are just starting or significantly desynced, reset the anchor
+      if (currentTransportTime == 0.0 && playbackCursor == 0) {
+        transportStartBeat = beats;
+      }
 
-      // If we are significantly off, snap transport (e.g. on start or large
-      // jump)
-      if (std::abs(targetTransportTime - currentTransportTime) > 0.5)
+      // Calculate elapsed time from the anchor in beats, then scale by File
+      // BPM
+      double elapsedBeats = beats - transportStartBeat;
+      double fileBpm = (currentFileBpm > 0) ? currentFileBpm : 120.0;
+      double secondsPerBeatFile = 60.0 / fileBpm;
+
+      // Target time is strictly derived from Link Beat Delta * File Scaling
+      double targetTransportTime = elapsedBeats * secondsPerBeatFile;
+
+      // Handle looping or negative time (if beat wrap)
+      if (targetTransportTime < 0)
+        targetTransportTime = 0;
+
+      // Snap if drift is too large (rare with this logic unless tempo changes
+      // drastically instantly)
+      if (std::abs(targetTransportTime - currentTransportTime) > 0.1)
         currentTransportTime = targetTransportTime;
 
       juce::ScopedLock sl(midiLock);
@@ -784,16 +922,13 @@ void MainComponent::hiResTimerCallback() {
         playbackCursor++;
       }
 
-      // Smoothly advance transport, but keep it tethered to Link beats
       currentTransportTime = targetTransportTime;
 
-      // Loop sequence if end reached
+      // Loop sequence
       if (playbackCursor >= playbackSeq.getNumEvents() && sequenceLength > 0) {
         if (btnLoopPlaylist.getToggleState()) {
           playbackCursor = 0;
-          // To handle Link sync on loop, we'd ideally use
-          // session.setIsPlayingAndRequestBeatAtTime(true, now, 0, quantum) but
-          // for now just resetting the cursor is a start.
+          transportStartBeat = beats; // Re-anchor on loop
         } else {
           isPlaying = false;
         }
@@ -806,7 +941,20 @@ void MainComponent::hiResTimerCallback() {
       isPlaying = true;
       currentTransportTime = 0;
       playbackCursor = 0;
+      transportStartBeat =
+          session.beatAtTime(futureTime, quantum); // Set Anchor
     }
+  }
+
+  // LOGGING PEERS
+  int peers = link->numPeers();
+  if (peers != lastNumPeers) {
+    lastNumPeers = peers;
+    juce::MessageManager::callAsync([this, peers] {
+      logPanel.log(juce::String("Link Peers: ") + juce::String(peers));
+      ledConnect.isConnected = (peers > 0);
+      ledConnect.repaint();
+    });
   }
 
   // VISUALS
@@ -889,6 +1037,7 @@ void MainComponent::loadMidiFile(juce::File f) {
     if (mf.getNumTracks() == 0)
       return;
     mf.convertTimestampTicksToSeconds();
+    currentFileBpm = 0; // Reset before scanning
     playbackSeq.clear();
     bool bpmFound = false;
     for (int i = 0; i < mf.getNumTracks(); ++i) {
@@ -940,7 +1089,9 @@ void MainComponent::updateVisibility() {
   lblArp.setVisible(isDash && !isSimpleMode);
   lblArpBpm.setVisible(isDash && !isSimpleMode);
   lblArpVel.setVisible(isDash && !isSimpleMode);
-  btnGPU.setVisible(!isSimpleMode && isDash);
+  lblArpVel.setVisible(isDash && !isSimpleMode);
+  // GPU Toggle always visible in advanced mode
+  btnGPU.setVisible(!isSimpleMode);
   btnPrOctUp.setVisible(isDash);
   btnPrOctDown.setVisible(isDash);
   btnTapTempo.setVisible(isDash);
@@ -982,11 +1133,13 @@ void MainComponent::resized() {
   auto area = getLocalBounds().reduced(5);
   auto menu = area.removeFromTop(30);
 
-  int bw = 140;
-  int startX = (menu.getWidth() - 3 * bw) / 2;
-  auto centerMenu = menu.withX(startX).withWidth(3 * bw);
+  int bw = isSimpleMode ? 80 : 100;
+  int centerW = 4 * bw;
 
+  auto centerMenu =
+      menu.withX((menu.getWidth() - centerW) / 2).withWidth(centerW);
   btnDash.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
+  btnCtrl.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
   btnOscCfg.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
   btnHelp.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
 
@@ -1165,10 +1318,20 @@ bool MainComponent::isInterestedInFileDrag(const juce::StringArray &) {
 }
 
 void MainComponent::filesDropped(const juce::StringArray &f, int, int) {
-  if (f[0].endsWith(".mid")) {
-    playlist.addFile(f[0]);
-    loadMidiFile(juce::File(f[0]));
-  }
+  std::function<void(juce::File)> scan = [&](juce::File t) {
+    if (t.isDirectory()) {
+      for (auto entry : t.findChildFiles(
+               juce::File::findFiles | juce::File::findDirectories, false))
+        scan(entry);
+    } else if (t.hasFileExtension(".mid")) {
+      playlist.addFile(t.getFullPathName());
+      if (playlist.files.size() == 1) // Load first one immediately
+        loadMidiFile(t);
+    }
+  };
+
+  for (auto &path : f)
+    scan(juce::File(path));
 }
 
 void MainComponent::handleIncomingMidiMessage(juce::MidiInput *,
