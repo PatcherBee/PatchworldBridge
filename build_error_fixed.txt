@@ -1,9 +1,0 @@
-﻿MSBuild version 18.0.5+e22287bf1 for .NET Framework
-
-  Checking File Globs
-  PatchworldBridge_rc_lib.vcxproj -> C:\PatchworldBridge\build\PatchworldBridge_rc_lib.dir\Release\PatchworldBridge_rc_lib.lib
-  BinaryData.vcxproj -> C:\PatchworldBridge\build\Release\BinaryData.lib
-MainComponent.obj : error LNK2001: unresolved external symbol "public: virtual void __cdecl MainComponent::prepareToPlay(int,double)" (?prepareToPlay@MainComponent@@UEAAXHN@Z) [C:\PatchworldBridge\build\PatchworldBridge.vcxproj]
-MainComponent.obj : error LNK2001: unresolved external symbol "public: virtual void __cdecl MainComponent::getNextAudioBlock(struct juce::AudioSourceChannelInfo const &)" (?getNextAudioBlock@MainComponent@@UEAAXAEBUAudioSourceChannelInfo@juce@@@Z) [C:\PatchworldBridge\build\PatchworldBridge.vcxproj]
-MainComponent.obj : error LNK2001: unresolved external symbol "public: virtual void __cdecl MainComponent::releaseResources(void)" (?releaseResources@MainComponent@@UEAAXXZ) [C:\PatchworldBridge\build\PatchworldBridge.vcxproj]
-C:\PatchworldBridge\build\PatchworldBridge_artefacts\Release\Patchworld MIDI OSC Bridge.exe : fatal error LNK1120: 3 unresolved externals [C:\PatchworldBridge\build\PatchworldBridge.vcxproj]
