@@ -10,6 +10,11 @@ _CPack_Packages/
 CPackConfig.cmake
 CPackSourceConfig.cmake
 
+build_*.txt
+cmake_*.txt
+rebuild.*
+*.log
+
 # --- Visual Studio ---
 .vs/
 *.sln
