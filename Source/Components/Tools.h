@@ -7,15 +7,56 @@
 #pragma once
 #include "Common.h"
 #include <JuceHeader.h>
+#include <atomic>
+
+class PingWorker : public juce::Thread {
+public:
+  std::atomic<int> lastPingMs{-1};
+  PingWorker() : juce::Thread("PingThread") { startThread(); }
+  ~PingWorker() { stopThread(2000); }
+
+  void run() override {
+    while (!threadShouldExit()) {
+      lastPingMs = runPing();
+      wait(5000);
+    }
+  }
+
+  int runPing() {
+    juce::ChildProcess proc;
+    juce::String cmd;
+#if JUCE_WINDOWS
+    cmd = "ping -n 1 8.8.8.8";
+#else
+    cmd = "ping -c 1 8.8.8.8";
+#endif
+    if (proc.start(cmd)) {
+      juce::String output = proc.readAllProcessOutput();
+      // Parse "time=XXms" or "time=XX ms"
+      // Windows: "time=12ms"
+      // Linux: "time=12.3 ms"
+      int idx = output.indexOf("time=");
+      if (idx > 0) {
+        juce::String sub = output.substring(idx + 5);
+        int msIdx = sub.indexOf("ms");
+        if (msIdx > 0) {
+          return sub.substring(0, msIdx).getFloatValue();
+        }
+      }
+    }
+    return -1;
+  }
+};
 
 class TrafficMonitor : public juce::Component, public juce::Timer {
 public:
   juce::TextEditor logDisplay;
   juce::Label statsLabel;
   juce::ToggleButton btnPause{"Pause"};
-  juce::TextButton btnClear{"Clear Log"};
+  juce::TextButton btnClear{"Clear"};
   juce::StringArray messageBuffer;
   int visibleLines = 0;
+  PingWorker pingWorker;
 
   TrafficMonitor() {
     statsLabel.setFont(juce::FontOptions(12.0f));
@@ -53,7 +94,12 @@ public:
   }
 
   void updateStats(const juce::String &text) {
-    statsLabel.setText(text, juce::dontSendNotification);
+    juce::String sysLat = (getSystemLatency() >= 0)
+                              ? (juce::String(getSystemLatency()) + "ms")
+                              : "--";
+    // Append System Ping to the Link text passed in
+    statsLabel.setText(text + " | IPv4 Latency: " + sysLat,
+                       juce::dontSendNotification);
   }
 
   void resetStats() {
@@ -62,6 +108,9 @@ public:
     logDisplay.clear();
     visibleLines = 0;
   }
+
+  // Custom method to poll ping
+  int getSystemLatency() { return pingWorker.lastPingMs; }
 
   void timerCallback() override {
     if (visibleLines > 0) {
@@ -88,23 +137,65 @@ private:
   juce::CriticalSection logLock;
 };
 
-class MidiPlaylist : public juce::Component, public juce::ListBoxModel {
+class MidiPlaylist : public juce::Component,
+                     public juce::ListBoxModel,
+                     public juce::DragAndDropContainer,
+                     public juce::DragAndDropTarget {
 public:
   juce::ListBox list;
   juce::StringArray files;
   int currentIndex = 0;
-  juce::ToggleButton btnLoop{"Loop"};
+
+  enum PlayMode { Single, LoopOne, LoopAll };
+  PlayMode playMode = Single;
+  juce::TextButton btnLoopMode{"Single"};
+  std::function<void(juce::String)> onLoopModeChanged;
+
   juce::TextButton btnClearPlaylist{"Clear"};
-  juce::Label lblTitle{{}, "Playlist"}; // NEW LABEL
+  juce::Label lblTitle{{}, "Playlist"};
 
   MidiPlaylist() {
     list.setModel(this);
     list.setRowHeight(24);
-    list.setColour(juce::ListBox::backgroundColourId, Theme::bgPanel);
+    list.setColour(juce::ListBox::backgroundColourId,
+                   juce::Colours::transparentBlack);
     addAndMakeVisible(list);
 
-    btnLoop.setColour(juce::ToggleButton::textColourId, juce::Colours::white);
-    addAndMakeVisible(btnLoop);
+    btnLoopMode.setColour(juce::TextButton::buttonColourId,
+                          juce::Colours::grey.withAlpha(0.2f));
+    btnLoopMode.setColour(juce::TextButton::textColourOffId,
+                          juce::Colours::white);
+
+    // Initial Text
+    btnLoopMode.setButtonText("Loop Off");
+
+    btnLoopMode.onClick = [this] {
+      if (playMode == Single) {
+        playMode = LoopOne;
+        btnLoopMode.setButtonText("Loop One");
+        // User requested: "change the color of 'Loop One' state to a more
+        // appealing color"
+        btnLoopMode.setColour(juce::TextButton::buttonColourId,
+                              juce::Colours::cyan.darker(0.3f));
+        if (onLoopModeChanged)
+          onLoopModeChanged("Loop One");
+      } else if (playMode == LoopOne) {
+        playMode = LoopAll;
+        btnLoopMode.setButtonText("Loop All");
+        btnLoopMode.setColour(juce::TextButton::buttonColourId,
+                              juce::Colours::green.withAlpha(0.6f));
+        if (onLoopModeChanged)
+          onLoopModeChanged("Loop All");
+      } else {
+        playMode = Single;
+        btnLoopMode.setButtonText("Loop Off");
+        btnLoopMode.setColour(juce::TextButton::buttonColourId,
+                              juce::Colours::grey.withAlpha(0.2f));
+        if (onLoopModeChanged)
+          onLoopModeChanged("Loop Off");
+      }
+    };
+    addAndMakeVisible(btnLoopMode);
 
     // Setup Header Label
     lblTitle.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
@@ -151,7 +242,7 @@ public:
     if (files.isEmpty()) {
       g.setColour(juce::Colours::grey);
       g.setFont(juce::FontOptions(14.0f));
-      g.drawText("- Drag Folder or .mid -", getLocalBounds().withTrimmedTop(20),
+      g.drawText("Drag & Drop .mid", getLocalBounds().withTrimmedTop(20),
                  juce::Justification::centred, true);
     }
   }
@@ -167,12 +258,61 @@ public:
                juce::Justification::centredLeft, true);
   }
 
+  // Drag & Drop Reordering
+  juce::var
+  getDragSourceDescription(const juce::SparseSet<int> &selectedRows) override {
+    if (selectedRows.size() > 0)
+      return "playlist_row_" + juce::String(selectedRows[0]);
+    return {};
+  }
+
+  bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails
+                                    &dragSourceDetails) override {
+    return dragSourceDetails.description.toString().startsWith("playlist_row_");
+  }
+
+  void itemDropped(const juce::DragAndDropTarget::SourceDetails
+                       &dragSourceDetails) override {
+    int sourceIndex = dragSourceDetails.description.toString()
+                          .fromLastOccurrenceOf("_", false, false)
+                          .getIntValue();
+    int targetIndex = list.getInsertionIndexForPosition(
+        dragSourceDetails.localPosition.toInt().x,
+        dragSourceDetails.localPosition.toInt().y);
+
+    if (sourceIndex >= 0 && sourceIndex < files.size()) {
+      // Adjust target if needed (simple swap or move)
+      // Let's implement move
+      if (targetIndex < 0)
+        targetIndex = files.size() - 1;
+      if (targetIndex > files.size())
+        targetIndex = files.size();
+
+      juce::String file = files[sourceIndex];
+      files.remove(sourceIndex);
+      if (targetIndex > sourceIndex)
+        targetIndex--; // Adjust for removal
+      files.insert(targetIndex, file);
+
+      if (currentIndex == sourceIndex)
+        currentIndex = targetIndex;
+      else if (currentIndex > sourceIndex && currentIndex <= targetIndex)
+        currentIndex--;
+      else if (currentIndex < sourceIndex && currentIndex >= targetIndex)
+        currentIndex++;
+
+      list.updateContent();
+      list.selectRow(currentIndex); // Keep selection
+      list.repaint();
+    }
+  }
+
   void resized() override {
     auto r = getLocalBounds();
     auto topRow = r.removeFromTop(25);
 
     // Layout: Loop | Playlist | Clear
-    btnLoop.setBounds(topRow.removeFromLeft(50));
+    btnLoopMode.setBounds(topRow.removeFromLeft(60));
     btnClearPlaylist.setBounds(topRow.removeFromRight(50).reduced(2));
     lblTitle.setBounds(topRow); // Centered in remaining space
 

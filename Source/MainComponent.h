@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     Source/MainComponent.h
-    Status: FIXED (Restored Missing Identifiers & Structs)
+    Status: RESTORED & SYNCED (Defines vol1Simple, Nudge Listener)
   ==============================================================================
 */
 #pragma once
@@ -18,7 +18,8 @@ class MainComponent : public juce::AudioAppComponent,
                       public juce::KeyListener,
                       public juce::ValueTree::Listener,
                       public juce::Timer,
-                      public juce::HighResolutionTimer {
+                      public juce::HighResolutionTimer,
+                      public juce::Slider::Listener {
 public:
   MainComponent();
   ~MainComponent() override;
@@ -36,6 +37,10 @@ public:
   getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
   void releaseResources() override;
 
+  // Slider Listener for Nudge Snap
+  void sliderDragEnded(juce::Slider *slider) override;
+  void sliderValueChanged(juce::Slider *slider) override;
+
   juce::String getLocalIPAddress();
 
 private:
@@ -51,7 +56,7 @@ private:
 
   juce::MidiKeyboardState keyboardState;
 
-  // GUI
+  // GUI Components
   juce::ImageComponent logoView;
   juce::TextButton btnDash{"Dashboard"}, btnCtrl{"Control"},
       btnOscCfg{"OSC Config"}, btnHelp{"Help"}, btnPanic;
@@ -64,10 +69,9 @@ private:
   juce::TextEditor edIp, edPOut, edPIn, helpText;
   juce::Viewport helpViewport;
   juce::TextButton btnConnect{"Connect"}, btnPlay{"Play"}, btnStop{"Stop"},
-      btnPrev{"<"}, btnSkip{">"}, btnResetFile{"Reset"}, btnClearPR{"Clear"},
-      btnResetBPM{"Reset BPM"}, btnTapTempo{"Tap Tempo"}, btnPrOctUp{"Oct +"},
-      btnPrOctDown{"Oct -"};
-  juce::Slider tempoSlider, latencySlider, sliderNoteDelay, sliderArpSpeed,
+      btnPrev{"<"}, btnSkip{">"}, btnClearPR{"Clear"}, btnResetBPM{"Reset BPM"},
+      btnTapTempo{"Tap Tempo"}, btnPrOctUp{"Oct +"}, btnPrOctDown{"Oct -"};
+  juce::Slider tempoSlider, nudgeSlider, sliderNoteDelay, sliderArpSpeed,
       sliderArpVel;
   juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern;
 
@@ -75,11 +79,12 @@ private:
   juce::ToggleButton btnLinkToggle{"Link"}, btnArp{"Latch"}, btnArpSync{"Sync"};
   juce::ToggleButton btnPreventBpmOverride{"Lock BPM"};
   juce::ToggleButton btnBlockMidiOut{"Block Out"};
+  juce::TextButton btnSplit{"Split"};
 
   ConnectionLight ledConnect;
   PhaseVisualizer phaseVisualizer;
 
-  // Custom wrappers defined in SubComponents.h
+  // Custom wrappers
   CustomKeyboard horizontalKeyboard{
       keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
   CustomKeyboard verticalKeyboard{
@@ -113,13 +118,15 @@ private:
   int arpNoteIndex = 0;
 
   int lastNumPeers = -1, virtualOctaveShift = 0, tapCounter = 0,
-      stepSeqIndex = -1, pianoRollOctaveShift = 0;
+      stepSeqIndex = -1,
+      pianoRollOctaveShift = 0; // Fixed: pianoRollOctaveShift declared here
   std::vector<double> tapTimes;
   std::set<int> activeChannels;
   juce::OpenGLContext openGLContext;
 
   double lastProcessedBeat = -1.0;
   double transportStartBeat = 0.0;
+  double beatsPlayedOnPause = 0.0;
   double ticksPerQuarterNote = 960.0;
   double currentSampleRate = 44100.0;
   bool pendingSyncStart = false;
@@ -128,8 +135,13 @@ private:
   bool startupRetryActive = true;
   bool isHandlingOsc = false;
 
+  // --- SIMPLE MODE SPECIFIC VARIABLES (Fixes Undeclared Identifier Error) ---
   juce::Slider vol1Simple, vol2Simple;
+  juce::Slider sliderPitchH, sliderModH, sliderPitchV, sliderModV;
+  juce::ToggleButton btnVol1CC{"CC20"}, btnVol2CC{"CC21"};
   juce::TextEditor txtVol1Osc, txtVol2Osc;
+
+  double baseBpm = 120.0;
 
   struct ActiveNote {
     int channel;
@@ -138,7 +150,6 @@ private:
   };
   std::vector<ActiveNote> activeVirtualNotes;
 
-  // --- RESTORED: This was causing the C2065 error ---
   struct ScheduledNote {
     int channel;
     int note;
@@ -146,7 +157,6 @@ private:
   };
   std::vector<ScheduledNote> scheduledNotes;
 
-  // --- RESTORED: This was causing the C3861 error ---
   double getDurationFromVelocity(float velocity0to1);
 
   void updateVisibility();

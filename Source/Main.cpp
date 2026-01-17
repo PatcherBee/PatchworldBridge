@@ -6,6 +6,7 @@
 */
 #include "MainComponent.h"
 #include <JuceHeader.h>
+#include <memory>
 
 class StandaloneOSCApplication : public juce::JUCEApplication {
 public:

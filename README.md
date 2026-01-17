@@ -1,6 +1,4 @@
-<img width="850" height="230" alt="beebanner1" src="https://github.com/user-attachments/assets/9c652c7e-7bd4-496b-aadb-b3d8a8f43cd3" />
-
-NOTICE - THIS IS AN ALPHA BUILD YOU WILL EXPERIENCE BUGS -
+🐝🐝🐝 THIS IS AN ALPHA BUILD YOU WILL EXPERIENCE BUGS 🐝🐝🐝
 
 🔗 Getting Connected 🔗
 

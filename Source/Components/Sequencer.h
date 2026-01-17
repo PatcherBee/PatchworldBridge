@@ -22,11 +22,11 @@ public:
       btnRoll32{"1/32"};
   int activeRollDiv = 0;
   juce::Slider noteSlider;
-  juce::ComboBox cmbSteps, cmbRate;
+  juce::ComboBox cmbSteps;
   juce::Label lblTitle{{}, "Sequencer"};
   juce::OwnedArray<juce::ToggleButton> stepButtons;
   int numSteps = 16, currentStep = -1;
-  juce::TextButton btnClear{"Clear Log"};
+  juce::TextButton btnClear{"Clear"};
 
   StepSequencer() {
     addAndMakeVisible(lblTitle);
@@ -38,15 +38,6 @@ public:
     cmbSteps.onChange = [this] {
       rebuildSteps(cmbSteps.getText().getIntValue());
     };
-
-    addAndMakeVisible(cmbRate);
-    cmbRate.addItem("1/1", 1);
-    cmbRate.addItem("1/2", 2);
-    cmbRate.addItem("1/4", 3);
-    cmbRate.addItem("1/8", 4);
-    cmbRate.addItem("1/16", 5);
-    cmbRate.addItem("1/32", 6);
-    cmbRate.setSelectedId(3, juce::dontSendNotification);
 
     noteSlider.setSliderStyle(juce::Slider::LinearBar);
     noteSlider.setRange(0, 127, 1);
@@ -69,6 +60,9 @@ public:
     setupRoll(btnRoll32, 32);
 
     rebuildSteps(16);
+
+    btnClear.onClick = [this] { clearSteps(); };
+    addAndMakeVisible(btnClear);
   }
 
   // --- RESTORED METHOD ---
@@ -99,34 +93,17 @@ public:
     return false;
   }
 
-  void paint(juce::Graphics &g) override {
-    g.fillAll(Theme::bgDark);
-
-    // Draw the Track Buttons (The part you said was "fucked")
-    if (activeTracks.empty()) {
-      g.setColour(juce::Colours::grey);
-      g.drawText("No MIDI Tracks", getLocalBounds().removeFromBottom(40),
-                 juce::Justification::centred);
-    } else {
-      int tw = getWidth() / juce::jmax(1, (int)activeTracks.size());
-      auto r = getLocalBounds().removeFromBottom(30);
-      for (int i = 0; i < activeTracks.size(); ++i) {
-        auto trackRect = r.removeFromLeft(tw).reduced(2);
-        g.setColour(Theme::getChannelColor(activeTracks[i].channel));
-        g.fillRoundedRectangle(trackRect.toFloat(), 4.0f);
-        g.setColour(juce::Colours::white);
-        g.drawText(activeTracks[i].name, trackRect,
-                   juce::Justification::centred);
-      }
-    }
-  }
-
   void resized() override {
     auto r = getLocalBounds().reduced(2);
     auto header = r.removeFromTop(25);
     lblTitle.setBounds(header.removeFromLeft(70));
-    cmbSteps.setBounds(header.removeFromLeft(45));
-    cmbRate.setBounds(header.removeFromLeft(55));
+    cmbSteps.setBounds(header.removeFromLeft(90)); // Widened
+    // cmbRate removed
+    btnClear.setBounds(header.removeFromRight(60).reduced(2));
+
+    // User requested: "missing the root not slider I askedd for that was there
+    // in last build"
+    noteSlider.setBounds(header.removeFromRight(80).reduced(2, 0));
 
     auto rollRow = r.removeFromTop(22);
     int rw = rollRow.getWidth() / 4;
@@ -138,8 +115,56 @@ public:
     r.removeFromBottom(35); // Room for track buttons
     if (stepButtons.size() > 0) {
       int sw = r.getWidth() / stepButtons.size();
-      for (int i = 0; i < stepButtons.size(); ++i)
-        stepButtons[i]->setBounds(i * sw, r.getY(), sw, r.getHeight());
+      for (int i = 0; i < stepButtons.size(); ++i) {
+        auto *b = stepButtons[i];
+        b->setBounds(i * sw, r.getY(), sw, r.getHeight());
+        // Simple visual feedback for "visual beat step indicators"
+        // If currentStep matches i, we could highlight it. But ToggleButton
+        // doesn't support dual state easily without lookandfeel. We will just
+        // rely on standard painting or adding a component behind it? Actually,
+        // let's just use the paint method to draw a highlight since the buttons
+        // effectively cover the area. Wait, buttons consume clicks. Let's make
+        // the buttons transparent? No, they track state. We can draw a border
+        // around the active step in paint(), ensuring buttons are slightly
+        // smaller or transparent? Or just set the toggle state? No, that clears
+        // the sequence. Let's try custom painting in the button? Too complex.
+        // Let's just draw a marker ABOVE the button row or BELOW it.
+        // The user says "missing the visual beat step indicators".
+        // I'll add a 'paintOverChildren' or just draw in paint and make sure
+        // buttons are transparent? Simplest: Draw a rectangle in paint() at the
+        // position of the current step.
+      }
     }
+  }
+
+  void paint(juce::Graphics &g) override {
+    g.fillAll(Theme::bgDark);
+
+    // Draw Active Step Highlight over buttons
+    if (stepButtons.size() > 0 && currentStep >= 0 &&
+        currentStep < stepButtons.size()) {
+      auto r = stepButtons[currentStep]->getBounds();
+      g.setColour(juce::Colours::white.withAlpha(0.2f));
+      g.fillRect(r);
+      g.setColour(Theme::accent);
+      g.drawRect(r, 2.0f);
+    }
+  }
+
+  // Ensure highlight is visible over buttons
+  void paintOverChildren(juce::Graphics &g) override {
+    if (stepButtons.size() > 0 && currentStep >= 0 &&
+        currentStep < stepButtons.size()) {
+      auto r = stepButtons[currentStep]->getBounds();
+      g.setColour(juce::Colours::white.withAlpha(0.4f)); // Increased from 0.2
+      g.fillRect(r);
+      g.setColour(Theme::accent);
+      g.drawRect(r, 2.0f);
+    }
+  }
+
+  void clearSteps() {
+    for (auto *b : stepButtons)
+      b->setToggleState(false, juce::dontSendNotification);
   }
 };
