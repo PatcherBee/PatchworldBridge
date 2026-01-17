@@ -10,6 +10,11 @@ _CPack_Packages/
 CPackConfig.cmake
 CPackSourceConfig.cmake
 
+build_debug/
+build_final/
+build_vs/
+build_win/
+
 JUCE/
 build_*.txt
 cmake_*.txt
