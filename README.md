@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/beebanner.png" width="200" alt="Patchworld Logo">
+  <img src="images/beebanner.png" width="800" alt="Patchworld Bridge Banner">
 </p>
 
 🐝🐝🐝 THIS IS AN ALPHA BUILD YOU WILL EXPERIENCE BUGS 🐝🐝🐝
