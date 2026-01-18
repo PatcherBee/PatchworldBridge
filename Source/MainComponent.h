@@ -1,187 +1,224 @@
 /*
   ==============================================================================
     Source/MainComponent.h
-    Status: RESTORED & SYNCED (Defines vol1Simple, Nudge Listener)
+    Status: FIXED (Removed inline bodies to prevent double-definition errors)
   ==============================================================================
 */
 #pragma once
-#include "SubComponents.h"
+
 #include <JuceHeader.h>
 #include <ableton/Link.hpp>
 
+// Use flat includes if files are in the same directory
+#include "Common.h"
+#include "Controls.h"
+#include "Mixer.h"
+#include "Sequencer.h"
+#include "SubComponents.h"
+#include "Tools.h"
+
 class MainComponent : public juce::AudioAppComponent,
-                      public juce::FileDragAndDropTarget,
-                      public juce::MidiInputCallback,
+                      public juce::Timer,
+                      public juce::HighResolutionTimer,
                       public juce::MidiKeyboardState::Listener,
                       public juce::OSCReceiver::Listener<
                           juce::OSCReceiver::MessageLoopCallback>,
+                      public juce::MidiInputCallback,
+                      public juce::Slider::Listener,
+                      public juce::FileDragAndDropTarget,
                       public juce::KeyListener,
-                      public juce::ValueTree::Listener,
-                      public juce::Timer,
-                      public juce::HighResolutionTimer,
-                      public juce::Slider::Listener {
+                      public juce::ValueTree::Listener {
 public:
   MainComponent();
   ~MainComponent() override;
 
-  void paint(juce::Graphics &) override;
+  // Standard JUCE Lifecycle
+  void paint(juce::Graphics &g) override;
   void resized() override;
-  void mouseDown(const juce::MouseEvent &) override;
-  bool keyPressed(const juce::KeyPress &, Component *) override;
-  bool isInterestedInFileDrag(const juce::StringArray &) override;
-  void filesDropped(const juce::StringArray &, int, int) override;
 
-  // AudioAppComponent overrides
+  // AudioAppComponent overrides (Declarations ONLY)
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
   void
   getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
   void releaseResources() override;
 
-  // Slider Listener for Nudge Snap
-  void sliderDragEnded(juce::Slider *slider) override;
-  void sliderValueChanged(juce::Slider *slider) override;
+  // Listeners
+  void handleNoteOn(juce::MidiKeyboardState *source, int midiChannel,
+                    int midiNoteNumber, float velocity) override;
+  void handleNoteOff(juce::MidiKeyboardState *source, int midiChannel,
+                     int midiNoteNumber, float velocity) override;
+  void oscMessageReceived(const juce::OSCMessage &message) override;
+  void handleIncomingMidiMessage(juce::MidiInput *source,
+                                 const juce::MidiMessage &message) override;
 
-  juce::String getLocalIPAddress();
+  void timerCallback() override;
+  void hiResTimerCallback() override;
+
+  // Slider Listener (Declarations ONLY)
+  void sliderValueChanged(juce::Slider *slider) override;
+  void sliderDragEnded(juce::Slider *slider) override;
+
+  // Drag & Drop (Declarations ONLY)
+  bool isInterestedInFileDrag(const juce::StringArray &files) override;
+  void filesDropped(const juce::StringArray &files, int x, int y) override;
+
+  // Input (Declarations ONLY)
+  bool keyPressed(const juce::KeyPress &key,
+                  Component *originatingComponent) override;
+  void valueTreePropertyChanged(juce::ValueTree &treeThatChanged,
+                                const juce::Identifier &property) override;
+  void mouseDown(const juce::MouseEvent &event) override;
 
 private:
-  ableton::Link *link;
-  double quantum = 4.0;
+  // Logic & Sync
+  ableton::Link *link = nullptr; // Raw pointer to match existing .cpp logic
   juce::UndoManager undoManager;
   juce::ValueTree parameters{"Params"};
   juce::CachedValue<double> bpmVal;
 
-  bool isSimpleMode = false;
-  enum class AppView { Dashboard, Control, OSC_Config, Help };
-  AppView currentView = AppView::Dashboard;
-
+  // Internal Objects
+  juce::OSCReceiver oscReceiver;
+  juce::OSCSender oscSender;
   juce::MidiKeyboardState keyboardState;
+  std::unique_ptr<juce::MidiInput> midiInput;
+  std::unique_ptr<juce::MidiOutput> midiOutput;
 
-  // GUI Components
-  juce::ImageComponent logoView;
-  juce::TextButton btnDash{"Dashboard"}, btnCtrl{"Control"},
-      btnOscCfg{"OSC Config"}, btnHelp{"Help"}, btnPanic;
-  juce::ToggleButton btnRetrigger{"Retrig"}, btnGPU{"GPU"};
-  juce::Label lblLocalIpHeader, lblLocalIpDisplay, lblTempo, lblLatency,
-      lblNoteDelay, lblArp, lblArpBpm, lblArpVel, lblIn, lblOut, lblCh, lblIp,
-      lblPOut, lblPIn;
-  juce::GroupComponent grpNet{{}, "Network"}, grpIo{{}, "MIDI"},
-      grpArp{{}, "Arp"};
-  juce::TextEditor edIp, edPOut, edPIn, helpText;
-  juce::Viewport helpViewport;
-  juce::TextButton btnConnect{"Connect"}, btnPlay{"Play"}, btnStop{"Stop"},
-      btnPrev{"<"}, btnSkip{">"}, btnClearPR{"Clear"}, btnResetBPM{"Reset BPM"},
-      btnTapTempo{"Tap Tempo"}, btnPrOctUp{"Oct +"}, btnPrOctDown{"Oct -"};
-  juce::Slider tempoSlider, nudgeSlider, sliderNoteDelay, sliderArpSpeed,
-      sliderArpVel;
-  juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern;
-
-  // Toggles
-  juce::ToggleButton btnLinkToggle{"Link"}, btnArp{"Latch"}, btnArpSync{"Sync"};
-  juce::ToggleButton btnPreventBpmOverride{"Lock BPM"};
-  juce::ToggleButton btnBlockMidiOut{"Block Out"};
-  juce::TextButton btnSplit{"Split"};
-
-  ConnectionLight ledConnect;
-  PhaseVisualizer phaseVisualizer;
-
-  // Custom wrappers
-  CustomKeyboard horizontalKeyboard{
-      keyboardState, juce::MidiKeyboardComponent::horizontalKeyboard};
-  CustomKeyboard verticalKeyboard{
-      keyboardState, juce::MidiKeyboardComponent::verticalKeyboardFacingRight};
-
-  ComplexPianoRoll trackGrid{keyboardState};
+  // Custom UI Components
+  CustomKeyboard horizontalKeyboard;
+  CustomKeyboard verticalKeyboard;
+  ComplexPianoRoll trackGrid;
   TrafficMonitor logPanel;
   MidiPlaylist playlist;
   StepSequencer sequencer;
   MixerContainer mixer;
-  juce::Viewport mixerViewport;
   OscAddressConfig oscConfig;
-  juce::Viewport oscViewport;
   ControlPage controlPage;
 
-  // Logic
-  std::unique_ptr<juce::MidiInput> midiInput;
-  std::unique_ptr<juce::MidiOutput> midiOutput;
-  juce::OSCSender oscSender;
-  juce::OSCReceiver oscReceiver;
+  // Viewports and Overlays
+  juce::Viewport oscViewport, helpViewport, mixerViewport;
+  juce::TextEditor helpText;
+  juce::TextEditor helpTextDisplay; // Added for Help content
+  juce::ImageComponent logoView;
+  juce::Label lblLocalIpHeader, lblLocalIpDisplay;
+
+  // Groups & Layout Labels
+  juce::GroupComponent grpNet, grpIo, grpArp, grpPlaceholder;
+  juce::Label lblArpBpm, lblArpVel, lblIp, lblPOut, lblPIn, lblIn, lblOut,
+      lblCh, lblTempo, lblLatency, lblArp, lblNoteDelay, lblLinkBeat, lblVol1,
+      lblVol2, lblArpSpdLabel, lblArpVelLabel;
+
+  // Controls
+  juce::Slider vol1Simple, vol2Simple, tempoSlider, nudgeSlider,
+      sliderNoteDelay, sliderArpSpeed, sliderArpVel;
+  juce::Slider sliderPitchH, sliderModH, sliderPitchV, sliderModV;
+  juce::TextEditor txtVol1Osc, txtVol2Osc, edIp, edPOut, edPIn;
+  juce::TextButton btnVol1CC, btnVol2CC, btnLinkToggle, btnTapTempo, btnPanic,
+      btnDash, btnCtrl, btnOscCfg, btnHelp, btnMidiScaling;
+  juce::ToggleButton btnMidiScalingToggle{"Scale 0-127"}; // New Toggle
+  juce::TextButton btnPlay, btnStop, btnPrev, btnSkip, btnClearPR, btnResetBPM,
+      btnConnect, btnPreventBpmOverride, btnBlockMidiOut, btnGPU, btnArp,
+      btnArpSync;
+  juce::TextButton btnPrOctUp, btnPrOctDown, btnSplit, btnRetrigger,
+      btnMidiThru, btnMidiClock;
+
+  // Custom Visualizers
+  PhaseVisualizer phaseVisualizer;
+  ConnectionLight ledConnect;
+  juce::DrawableRectangle wheelFutureBox;
+
+  // Logic Variables
+  bool isSimpleMode = false;
   bool isOscConnected = false;
-  juce::MidiMessageSequence playbackSeq;
-  double sequenceLength = 0, currentFileBpm = 0;
-  int playbackCursor = 0;
   bool isPlaying = false;
-  juce::CriticalSection midiLock;
+  bool pendingSyncStart = false;
+  bool isHandlingOsc = false;
+  bool startupRetryActive = true;
+  bool isFullRangeMidi = false;
+  bool isMidiScaling127 =
+      false; // Default: 0-1 (False) switchable to 0-127 (True)
 
-  // Arp State
-  juce::Array<int> heldNotes;
-  std::vector<int> noteArrivalOrder;
-  int arpNoteIndex = 0;
-
-  int lastNumPeers = -1, virtualOctaveShift = 0, tapCounter = 0,
-      stepSeqIndex = -1,
-      pianoRollOctaveShift = 0; // Fixed: pianoRollOctaveShift declared here
-  std::vector<double> tapTimes;
-  std::set<int> activeChannels;
-  juce::OpenGLContext openGLContext;
-
-  double lastProcessedBeat = -1.0;
+  double quantum = 4.0;
   double transportStartBeat = 0.0;
   double beatsPlayedOnPause = 0.0;
-  double ticksPerQuarterNote = 960.0;
-  double currentSampleRate = 44100.0;
-  bool pendingSyncStart = false;
-
-  int linkRetryCounter = 0;
-  bool startupRetryActive = true;
-  bool isHandlingOsc = false;
-
-  // --- SIMPLE MODE SPECIFIC VARIABLES (Fixes Undeclared Identifier Error) ---
-  juce::Slider vol1Simple, vol2Simple;
-  juce::Slider sliderPitchH, sliderModH, sliderPitchV, sliderModV;
-  juce::ToggleButton btnVol1CC{"CC20"}, btnVol2CC{"CC21"};
-  juce::TextEditor txtVol1Osc, txtVol2Osc;
-
+  double lastProcessedBeat = -1.0;
   double baseBpm = 120.0;
+  double accumulatedClock = 0.0; // For MIDI Clock Pulse
+  double ticksPerQuarterNote = 960.0;
+  double sequenceLength = 0.0;
+  double currentFileBpm = 0.0;
+  double currentSampleRate = 44100.0;
+  double internalPlaybackStartTimeMs = 0.0; // For Link-disabled playback
 
-  struct ActiveNote {
-    int channel;
-    int note;
-    double releaseTime;
-  };
-  std::vector<ActiveNote> activeVirtualNotes;
+  int tapCounter = 0;
+  int lastNumPeers = 0;
+  int linkRetryCounter = 0;
+  int playbackCursor = 0;
+  int pianoRollOctaveShift = 0;
+  int virtualOctaveShift = 0;
 
+  // MIDI Clock In Sync
+  std::vector<double> clockInTimes;
+  double midiInBpm = 120.0;
+  int clockPulseCounter = 0;
+  bool isSyncingToMidiIn = false;
+
+  std::vector<double> tapTimes;
+  juce::MidiMessageSequence playbackSeq;
+  std::set<int> activeChannels;
+  juce::CriticalSection midiLock;
+  juce::OpenGLContext openGLContext;
+  juce::TooltipWindow tooltipWindow{this, 500}; // Added TooltipWindow
+
+  // Arpeggiator State
+  double lastArpNoteTime = 0.0;
+  int currentArpIndex = 0;
+  int lastReceivedCC[17] = {0}; // Track last CC for /chXcv
+
+  // Structs for Note Scheduling
   struct ScheduledNote {
     int channel;
     int note;
     double releaseTimeMs;
   };
   std::vector<ScheduledNote> scheduledNotes;
+  struct VirtualNote {
+    int channel;
+    int note;
+    double releaseTime;
+  };
+  std::vector<VirtualNote> activeVirtualNotes;
+  std::vector<int> noteArrivalOrder;
+  juce::Array<int> heldNotes;
 
-  double getDurationFromVelocity(float velocity0to1);
+  // ComboBoxes
+  juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern;
 
-  void updateVisibility();
+  enum class AppView { Dashboard, Control, OSC_Config, Help };
+  AppView currentView = AppView::Dashboard;
+
+  // Private Helper Methods
   void setView(AppView v);
-  void sendPanic();
+  void updateVisibility();
   void loadMidiFile(juce::File f);
+  void startPlayback();
+  void pausePlayback();
+  void clearPlaybackSequence();
+  void sendPanic();
   void stopPlayback();
-  void takeSnapshot();
-  void sendSplitOscMessage(const juce::MidiMessage &m,
-                           int overrideChannel = -1);
+  void toggleChannel(int ch, bool active);
+  int getSelectedChannel() const;
+  juce::String getLocalIPAddress();
+  double getDurationFromVelocity(float velocity0to1);
   int matchOscChannel(const juce::String &pattern,
                       const juce::String &incoming);
-  int getSelectedChannel() const;
-  void toggleChannel(int ch, bool active);
+  void sendSplitOscMessage(const juce::MidiMessage &m,
+                           int overrideChannel = -1);
+  void updateSequencerStep(double currentBeat, double quantum);
+
+  // Snapshot/Undo members
+  void takeSnapshot();
   void performUndo();
   void performRedo();
 
-  void handleIncomingMidiMessage(juce::MidiInput *,
-                                 const juce::MidiMessage &) override;
-  void handleNoteOn(juce::MidiKeyboardState *, int, int, float) override;
-  void handleNoteOff(juce::MidiKeyboardState *, int, int, float) override;
-  void valueTreePropertyChanged(juce::ValueTree &,
-                                const juce::Identifier &) override;
-  void oscMessageReceived(const juce::OSCMessage &) override;
-  void timerCallback() override;
-  void hiResTimerCallback() override;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

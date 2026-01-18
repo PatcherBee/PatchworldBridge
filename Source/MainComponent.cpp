@@ -1,7 +1,8 @@
 /*
   ==============================================================================
     Source/MainComponent.cpp
-    Status: FIXED & RESTORED (Nudge Snap, 2-Ch Simple Mode, Build Fix)
+    Status: CRITICAL FIXES (Layouts Repaired, Playback Controls Restored, OSC CC
+  Multi-Arg)
   ==============================================================================
 */
 
@@ -9,7 +10,6 @@
 #include <JuceHeader.h>
 #include <ableton/Link.hpp>
 #include <algorithm>
-#include <cmath>
 #include <map>
 
 //==============================================================================
@@ -25,6 +25,16 @@ MainComponent::~MainComponent() {
   juce::HighResolutionTimer::stopTimer();
   openGLContext.detach();
   keyboardState.removeListener(this);
+}
+
+//==============================================================================
+// HELPER: Velocity to Duration
+//==============================================================================
+double MainComponent::getDurationFromVelocity(float velocity0to1) {
+  const double minDurationMs = 30.0;
+  const double maxDurationMs = 800.0;
+  float clippedVel = juce::jlimit(0.0f, 1.0f, velocity0to1);
+  return minDurationMs + (clippedVel * (maxDurationMs - minDurationMs));
 }
 
 //==============================================================================
@@ -89,19 +99,83 @@ MainComponent::MainComponent()
   grpIo.setText("MIDI Configuration");
   grpArp.setText("Arpeggiator Gen");
 
+  // Placeholder Box
+  grpPlaceholder.setText("");
+  grpPlaceholder.setColour(juce::GroupComponent::outlineColourId,
+                           juce::Colours::grey.withAlpha(0.3f));
+  addChildComponent(grpPlaceholder);
+
   lblArpBpm.setText("Speed", juce::dontSendNotification);
   lblArpVel.setText("Vel", juce::dontSendNotification);
 
-  // --- SIMPLE MODE SLIDERS (Fixes Undeclared Identifier) ---
+  addAndMakeVisible(lblArpSpdLabel);
+  addAndMakeVisible(lblArpVelLabel);
+  lblArpSpdLabel.setText("Speed", juce::dontSendNotification);
+  lblArpVelLabel.setText("Vel", juce::dontSendNotification);
+  lblArpSpdLabel.setJustificationType(juce::Justification::centred);
+  lblArpVelLabel.setJustificationType(juce::Justification::centred);
+  lblArpSpdLabel.setFont(juce::FontOptions(11.0f));
+  lblArpVelLabel.setFont(juce::FontOptions(11.0f));
+
+  wheelFutureBox.setFill(juce::Colours::grey.withAlpha(0.1f));
+  wheelFutureBox.setStrokeType(juce::PathStrokeType(1.0f));
+  wheelFutureBox.setStrokeFill(juce::Colours::grey.withAlpha(0.4f));
+  addAndMakeVisible(wheelFutureBox);
+
+  // --- BUTTON TEXT ---
+  btnDash.setButtonText("Dashboard");
+  btnCtrl.setButtonText("Control");
+  btnOscCfg.setButtonText("OSC Config");
+  btnHelp.setButtonText("Help");
+
+  btnPlay.setButtonText("Play");
+  btnStop.setButtonText("Stop");
+  btnPrev.setButtonText("<");
+  btnSkip.setButtonText(">");
+  btnClearPR.setButtonText("Clear");
+  btnResetBPM.setButtonText("Reset BPM");
+  btnTapTempo.setButtonText("Tap Tempo");
+  btnPrOctUp.setButtonText("Oct +");
+  btnPrOctDown.setButtonText("Oct -");
+  btnPanic.setButtonText("Panic"); // Set initial text
+
+  btnConnect.setButtonText("Connect");
+  btnRetrigger.setButtonText("Retrig");
+  btnGPU.setButtonText("GPU");
+  btnBlockMidiOut.setButtonText("Block Out");
+  btnMidiScaling.setButtonText("MIDI Scale: 0-1");
+  btnMidiScaling.setClickingTogglesState(true);
+  btnMidiScaling.onClick = [this] {
+    isFullRangeMidi = btnMidiScaling.getToggleState();
+    btnMidiScaling.setButtonText(isFullRangeMidi ? "MIDI Scale: 0-127"
+                                                 : "MIDI Scale: 0-1");
+  };
+  btnLinkToggle.setButtonText("Link");
+  btnMidiThru.setButtonText("Thru"); // New Thru button
+  btnSplit.setButtonText("Split");
+  btnPreventBpmOverride.setTooltip(
+      "Prevent loading MIDI files from changing Tempo");
+
+  // --- SIMPLE MODE SLIDERS ---
   auto setupSimpleVol = [&](juce::Slider &s, juce::TextEditor &t, int ch) {
     s.setSliderStyle(juce::Slider::LinearVertical);
     s.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     s.setRange(0, 127, 1);
     s.setValue(100);
-    s.onValueChange = [this, &s, &t] {
+    s.onValueChange = [this, &s, &t, ch] {
+      float valNorm = (float)s.getValue() / 127.0f;
+      // OSC
       if (isOscConnected) {
-        oscSender.send(t.getText(), (float)s.getValue() / 127.0f);
+        oscSender.send(t.getText(), valNorm);
       }
+      // MIDI
+      if (midiOutput) {
+        midiOutput->sendMessageNow(
+            juce::MidiMessage::controllerEvent(ch, 7, (int)s.getValue()));
+      }
+      logPanel.log("Simple Vol " + juce::String(ch) + ": " +
+                       juce::String((int)s.getValue()),
+                   false);
     };
     addAndMakeVisible(s);
 
@@ -119,8 +193,39 @@ MainComponent::MainComponent()
 
   addAndMakeVisible(btnVol1CC);
   btnVol1CC.setButtonText("CC20");
+  btnVol1CC.onClick = [this] {
+    if (midiOutput)
+      midiOutput->sendMessageNow(
+          juce::MidiMessage::controllerEvent(1, 20, 127));
+    if (isOscConnected)
+      oscSender.send("/ch1/cc20", 1.0f);
+    logPanel.log("! CC20 Sent", false);
+    // Reset?
+    juce::MessageManager::callAsync([this] {
+      if (midiOutput)
+        midiOutput->sendMessageNow(
+            juce::MidiMessage::controllerEvent(1, 20, 0));
+      if (isOscConnected)
+        oscSender.send("/ch1/cc20", 0.0f);
+    });
+  };
   addAndMakeVisible(btnVol2CC);
   btnVol2CC.setButtonText("CC21");
+  btnVol2CC.onClick = [this] {
+    if (midiOutput)
+      midiOutput->sendMessageNow(
+          juce::MidiMessage::controllerEvent(2, 21, 127));
+    if (isOscConnected)
+      oscSender.send("/ch2/cc21", 1.0f);
+    logPanel.log("! CC21 Sent", false);
+    juce::MessageManager::callAsync([this] {
+      if (midiOutput)
+        midiOutput->sendMessageNow(
+            juce::MidiMessage::controllerEvent(2, 21, 0));
+      if (isOscConnected)
+        oscSender.send("/ch2/cc21", 0.0f);
+    });
+  };
 
   // --- Labels ---
   lblIp.setText("IP:", juce::dontSendNotification);
@@ -130,57 +235,118 @@ MainComponent::MainComponent()
   lblOut.setText("Out:", juce::dontSendNotification);
   lblCh.setText("CH:", juce::dontSendNotification);
 
+  addAndMakeVisible(lblVol1);
+  lblVol1.setText("Vol 1", juce::dontSendNotification);
+  lblVol1.setJustificationType(juce::Justification::centred);
+
+  addAndMakeVisible(lblVol2);
+  lblVol2.setText("Vol 2", juce::dontSendNotification);
+  lblVol2.setJustificationType(juce::Justification::centred);
+
   horizontalKeyboard.setWantsKeyboardFocus(false);
   verticalKeyboard.setWantsKeyboardFocus(false);
   verticalKeyboard.setKeyWidth(30);
 
   // --- Quantum / Link ---
   addAndMakeVisible(cmbQuantum);
-  cmbQuantum.addItemList(
-      {"1 Beat", "2 Beats", "4 Beats (Bar)", "8 Beats", "16 Beats"}, 1);
-  cmbQuantum.setSelectedId(3); // Default 4 Beats
+  cmbQuantum.addItemList({"1 Beat", "2 Beats", "3 Beats", "4 Beats", "5 Beats",
+                          "8 Beats", "16 Beats"},
+                         1);
+  cmbQuantum.setSelectedId(4);
   cmbQuantum.onChange = [this] {
     int sel = cmbQuantum.getSelectedId();
-    if (sel == 1)
+    switch (sel) {
+    case 1:
       quantum = 1.0;
-    else if (sel == 2)
+      break;
+    case 2:
       quantum = 2.0;
-    else if (sel == 3)
+      break;
+    case 3:
+      quantum = 3.0;
+      break;
+    case 4:
       quantum = 4.0;
-    else if (sel == 4)
+      break;
+    case 5:
+      quantum = 5.0;
+      break;
+    case 6:
       quantum = 8.0;
-    else if (sel == 5)
+      break;
+    case 7:
       quantum = 16.0;
+      break;
+    }
+    logPanel.log("Quantum Changed: " + cmbQuantum.getText(), false);
   };
 
+  addAndMakeVisible(lblLinkBeat);
+  lblLinkBeat.setText("Bar: -.--", juce::dontSendNotification);
+  lblLinkBeat.setJustificationType(juce::Justification::centred);
+
   addAndMakeVisible(btnLinkToggle);
+  btnLinkToggle.setClickingTogglesState(true);
+  btnLinkToggle.setColour(juce::TextButton::buttonColourId,
+                          juce::Colours::grey);
+  btnLinkToggle.setColour(juce::TextButton::buttonOnColourId,
+                          juce::Colours::cyan.darker(0.2f));
   btnLinkToggle.setToggleState(true, juce::dontSendNotification);
   btnLinkToggle.onClick = [this] {
     bool enabled = btnLinkToggle.getToggleState();
     link->enable(enabled);
     link->enableStartStopSync(enabled);
     startupRetryActive = false;
-    logPanel.log(enabled ? "Link Enabled" : "Link Disabled", true);
+    logPanel.log(enabled ? "! Link Enabled" : "! Link Disabled", true);
   };
 
   addAndMakeVisible(btnPreventBpmOverride);
   btnPreventBpmOverride.setToggleState(false, juce::dontSendNotification);
-  btnPreventBpmOverride.setTooltip(
-      "Prevent loading MIDI files from changing Tempo");
+  btnPreventBpmOverride.onClick = [this] {
+    logPanel.log(
+        "! BPM Lock: " +
+            juce::String(btnPreventBpmOverride.getToggleState() ? "ON" : "OFF"),
+        false);
+  };
 
-  addAndMakeVisible(btnBlockMidiOut);
-  btnBlockMidiOut.setButtonText("Block Out");
+  auto configureToggleButton = [this](juce::TextButton &btn, juce::String text,
+                                      juce::Colour onColor,
+                                      juce::String logName) {
+    btn.setButtonText(text);
+    btn.setClickingTogglesState(true);
+    btn.setColour(juce::TextButton::buttonOnColourId, onColor);
+    btn.setColour(juce::TextButton::buttonColourId,
+                  juce::Colours::grey); // Default Off
+    btn.onClick = [this, &btn, logName] {
+      logPanel.log(
+          "! " + logName + ": " + (btn.getToggleState() ? "ON" : "OFF"), true);
+      // Force repaint to show color change definitely if needed (JUCE usually
+      // handles this with LookAndFeel, but explicit is fine)
+      btn.repaint();
+    };
+    addAndMakeVisible(btn);
+  };
+
+  configureToggleButton(btnBlockMidiOut, "Block Out", juce::Colours::red,
+                        "Block MIDI Out");
+  configureToggleButton(btnMidiThru, "Thru", juce::Colours::green.darker(0.4f),
+                        "MIDI Thru");
+  configureToggleButton(btnMidiClock, "Clock",
+                        juce::Colours::orange.darker(0.1f), "MIDI Clock Out");
+  configureToggleButton(btnSplit, "Split", juce::Colours::blue, "Split Mode");
+  configureToggleButton(btnRetrigger, "Retrig", juce::Colours::red,
+                        "Retrigger");
+
+  btnMidiClock.setTooltip("Send MIDI Clock (F8) to MIDI Out");
+  btnMidiThru.setTooltip("Echo MIDI Input to Output");
 
   // --- Nudge Slider ---
   addAndMakeVisible(nudgeSlider);
-  nudgeSlider.setRange(-0.10, 0.10, 0.001); // -10% to +10%
+  nudgeSlider.setRange(-0.10, 0.10, 0.001);
   nudgeSlider.setValue(0.0);
   nudgeSlider.setSliderStyle(juce::Slider::LinearHorizontal);
   nudgeSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-
-  // Register Listener for Snap Back
   nudgeSlider.addListener(this);
-
   nudgeSlider.onValueChange = [this] {
     if (link) {
       double mult = 1.0 + nudgeSlider.getValue();
@@ -195,6 +361,7 @@ MainComponent::MainComponent()
       auto state = link->captureAppSessionState();
       baseBpm = state.tempo();
     }
+    logPanel.log("! Nudge Start", false);
   };
 
   addAndMakeVisible(lblLatency);
@@ -227,7 +394,7 @@ MainComponent::MainComponent()
         juce::MessageManager::callAsync([this, bpm] {
           tempoSlider.setValue(bpm, juce::dontSendNotification);
         });
-        logPanel.log("Tap Tempo: " + juce::String(bpm), true);
+        logPanel.log("! Tap Tempo: " + juce::String(bpm, 1), true);
       }
       tapTimes.clear();
       tapCounter = 0;
@@ -237,7 +404,6 @@ MainComponent::MainComponent()
 
   // --- Dashboard Navigation ---
   addAndMakeVisible(btnPanic);
-  btnPanic.setButtonText("PANIC");
   btnPanic.setColour(juce::TextButton::buttonColourId, juce::Colours::darkred);
   btnPanic.onClick = [this] { sendPanic(); };
 
@@ -248,11 +414,15 @@ MainComponent::MainComponent()
     } else {
       isSimpleMode = !isSimpleMode;
       if (isSimpleMode)
-        setSize(500, 600); // Simple Mode width
+        setSize(500, 650);
       else
-        setSize(800, 630); // Default width
+        setSize(800, 750);
       updateVisibility();
       resized();
+      logPanel.log("! Switched to " +
+                       juce::String(isSimpleMode ? "Simple" : "Default") +
+                       " Mode",
+                   true);
     }
   };
 
@@ -284,15 +454,34 @@ MainComponent::MainComponent()
     setView(currentView == AppView::Help ? AppView::Dashboard : AppView::Help);
   };
 
-  addAndMakeVisible(btnRetrigger);
-  btnRetrigger.setButtonText("Retrig");
+  // Retrigger configured above
 
   addAndMakeVisible(btnGPU);
+  btnGPU.setClickingTogglesState(true);
+  btnGPU.setButtonText("GPU");
   btnGPU.onClick = [this] {
-    if (btnGPU.getToggleState())
+    if (btnGPU.getToggleState()) {
       openGLContext.attachTo(*this);
-    else
+      logPanel.log("! GPU Rendering: ON", true);
+    } else {
       openGLContext.detach();
+      logPanel.log("! GPU Rendering: OFF", true);
+    }
+  };
+
+  addAndMakeVisible(btnPanic);
+  btnPanic.setButtonText("P");
+  btnPanic.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
+  btnPanic.onClick = [this] { sendPanic(); };
+
+  addAndMakeVisible(btnRetrigger);
+  btnRetrigger.setButtonText("Retrig");
+  btnRetrigger.setClickingTogglesState(true);
+  btnRetrigger.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
+  btnRetrigger.onClick = [this] {
+    logPanel.log("! Retrigger: " +
+                     juce::String(btnRetrigger.getToggleState() ? "ON" : "OFF"),
+                 false);
   };
 
   // --- Network ---
@@ -326,10 +515,14 @@ MainComponent::MainComponent()
         isOscConnected = true;
         ledConnect.isConnected = true;
         btnConnect.setButtonText("Disconnect");
-        logPanel.log("OSC Connected", true);
-        logPanel.resetStats();
-      } else
+        logPanel.log("! OSC Connected (" + edIp.getText() + ":" +
+                         edPOut.getText() + ")",
+                     true);
+        // User Fix: Connect clears log -> REMOVED logPanel.resetStats();
+      } else {
         btnConnect.setToggleState(false, juce::dontSendNotification);
+        logPanel.log("! OSC Connection Failed", true);
+      }
     } else {
       oscSender.disconnect();
       oscReceiver.disconnect();
@@ -337,7 +530,7 @@ MainComponent::MainComponent()
       ledConnect.isConnected = false;
       ledConnect.repaint();
       btnConnect.setButtonText("Connect");
-      logPanel.log("OSC Disconnected", true);
+      logPanel.log("! OSC Disconnected", true);
     }
     ledConnect.repaint();
     grabKeyboardFocus();
@@ -356,6 +549,9 @@ MainComponent::MainComponent()
   for (int i = 1; i <= 16; ++i)
     cmbMidiCh.addItem(juce::String(i), i);
   cmbMidiCh.setSelectedId(17, juce::dontSendNotification);
+  cmbMidiCh.onChange = [this] {
+    logPanel.log("! MIDI Ch Changed: " + cmbMidiCh.getText(), false);
+  };
 
   addAndMakeVisible(tempoSlider);
   tempoSlider.setRange(20, 444, 1.0);
@@ -384,6 +580,7 @@ MainComponent::MainComponent()
 
   cmbMidiIn.onChange = [this] {
     midiInput.reset();
+    juce::String deviceName = cmbMidiIn.getText();
     if (cmbMidiIn.getSelectedId() > 2) {
       midiInput = juce::MidiInput::openDevice(
           juce::MidiInput::getAvailableDevices()[cmbMidiIn.getSelectedId() - 3]
@@ -392,43 +589,48 @@ MainComponent::MainComponent()
       if (midiInput)
         midiInput->start();
     }
+    logPanel.log("! MIDI In: " + deviceName, true);
     grabKeyboardFocus();
   };
   cmbMidiOut.onChange = [this] {
     midiOutput.reset();
+    juce::String deviceName = cmbMidiOut.getText();
     if (cmbMidiOut.getSelectedId() > 1)
       midiOutput = juce::MidiOutput::openDevice(
           juce::MidiOutput::getAvailableDevices()[cmbMidiOut.getSelectedId() -
                                                   2]
               .identifier);
+    logPanel.log("! MIDI Out: " + deviceName, true);
   };
 
   // --- Playback Controls ---
   addAndMakeVisible(btnPlay);
-  addAndMakeVisible(btnStop);
-  addAndMakeVisible(btnPrev);
-  addAndMakeVisible(btnSkip);
-  addAndMakeVisible(btnClearPR);
-  btnClearPR.setButtonText("Clear");
-  btnPrev.setButtonText("<");
-  btnSkip.setButtonText(">");
-
-  btnClearPR.onClick = [this] {
-    juce::ScopedLock sl(midiLock);
-    playbackSeq.clear();
-    sequenceLength = 0;
-    trackGrid.loadSequence(playbackSeq);
-    repaint();
-    logPanel.log("Piano Roll Cleared", true);
-    mixer.removeAllStrips(); // Reset Channels on Clear
-    grabKeyboardFocus();
+  btnPlay.onClick = [this] {
+    if (isPlaying && !pendingSyncStart) {
+      pausePlayback();
+    } else {
+      startPlayback();
+    }
   };
-
-  addAndMakeVisible(lblTempo);
-  lblTempo.setText("BPM:", juce::dontSendNotification);
-
+  addAndMakeVisible(btnStop);
+  btnStop.onClick = [this] { stopPlayback(); };
+  addAndMakeVisible(btnPrev);
+  btnPrev.onClick = [this] {
+    bool wasPlaying = isPlaying;
+    loadMidiFile(juce::File(playlist.getPrevFile()));
+    if (wasPlaying)
+      startPlayback();
+  };
+  addAndMakeVisible(btnSkip);
+  btnSkip.onClick = [this] {
+    bool wasPlaying = isPlaying;
+    loadMidiFile(juce::File(playlist.getNextFile()));
+    if (wasPlaying)
+      startPlayback();
+  };
+  addAndMakeVisible(btnClearPR);
+  btnClearPR.onClick = [this] { clearPlaybackSequence(); };
   addAndMakeVisible(btnResetBPM);
-  btnResetBPM.setButtonText("Reset BPM");
   btnResetBPM.onClick = [this] {
     double target = (currentFileBpm > 0.0) ? currentFileBpm : 120.0;
     auto state = link->captureAppSessionState();
@@ -436,24 +638,28 @@ MainComponent::MainComponent()
     link->commitAppSessionState(state);
     parameters.setProperty("bpm", target, nullptr);
     tempoSlider.setValue(target, juce::dontSendNotification);
+    logPanel.log("! BPM Reset to " + juce::String(target, 1), true);
     grabKeyboardFocus();
   };
 
-  addAndMakeVisible(btnPrOctUp);
-  addAndMakeVisible(btnPrOctDown);
+  addAndMakeVisible(btnPreventBpmOverride);
+  btnPreventBpmOverride.setButtonText("BPM Lock");
+  btnPreventBpmOverride.setClickingTogglesState(true);
 
   addAndMakeVisible(btnSplit);
   btnSplit.setButtonText("Split");
   btnSplit.setClickingTogglesState(true);
-  btnSplit.setColour(juce::TextButton::buttonOnColourId,
-                     juce::Colours::cyan.darker(0.3f));
   btnSplit.onClick = [this] {
     if (btnSplit.getToggleState())
-      logPanel.log("Split Mode: ON", true);
+      logPanel.log("! Split Mode: Ch1 into Ch 1/2", true);
     else
-      logPanel.log("Split Mode: OFF", true);
-    grabKeyboardFocus();
+      logPanel.log("! Split Mode: OFF", true);
   };
+
+  addAndMakeVisible(btnPrOctUp);
+  btnPrOctUp.setButtonText("Oct +");
+  addAndMakeVisible(btnPrOctDown);
+  btnPrOctDown.setButtonText("Oct -");
 
   // --- Pitch/Mod Wheels ---
   auto setupWheel = [this](juce::Slider &s, bool isPitch) {
@@ -473,7 +679,6 @@ MainComponent::MainComponent()
   setupWheel(sliderPitchV, true);
   setupWheel(sliderModV, false);
 
-  // Wheel Logic
   auto onWheelChange = [this](bool horizontal) {
     int ch = getSelectedChannel();
     int pVal =
@@ -489,7 +694,6 @@ MainComponent::MainComponent()
     }
     sendSplitOscMessage(mp);
     sendSplitOscMessage(mm);
-    // Sync
     if (horizontal) {
       sliderPitchV.setValue(sliderPitchH.getValue(),
                             juce::dontSendNotification);
@@ -505,9 +709,9 @@ MainComponent::MainComponent()
   sliderPitchV.onValueChange = [this, onWheelChange] { onWheelChange(false); };
   sliderModV.onValueChange = [this, onWheelChange] { onWheelChange(false); };
 
-  // Snap back
   sliderPitchH.onDragEnd = [this] {
     sliderPitchH.setValue(0, juce::sendNotification);
+    logPanel.log("! Pitch Wheel Reset", false);
   };
   sliderPitchV.onDragEnd = [this] {
     sliderPitchV.setValue(0, juce::sendNotification);
@@ -517,101 +721,32 @@ MainComponent::MainComponent()
   btnPrOctUp.onClick = [this] {
     pianoRollOctaveShift++;
     virtualOctaveShift = pianoRollOctaveShift;
-    logPanel.log("Octave + (" + juce::String(pianoRollOctaveShift) + ")", true);
+    logPanel.log("! Octave + (" + juce::String(pianoRollOctaveShift) + ")",
+                 true);
     grabKeyboardFocus();
   };
   btnPrOctDown.onClick = [this] {
     pianoRollOctaveShift--;
     virtualOctaveShift = pianoRollOctaveShift;
-    logPanel.log("Octave - (" + juce::String(pianoRollOctaveShift) + ")", true);
+    logPanel.log("! Octave - (" + juce::String(pianoRollOctaveShift) + ")",
+                 true);
     grabKeyboardFocus();
-  };
-
-  // --- Transport Logic ---
-  btnPlay.onClick = [this] {
-    if (isPlaying) {
-      // PAUSE
-      logPanel.log("Transport: Paused", true);
-      auto now = link->clock().micros();
-      auto session = link->captureAppSessionState();
-      beatsPlayedOnPause =
-          session.beatAtTime(now, quantum) - transportStartBeat;
-      session.setIsPlayingAndRequestBeatAtTime(false, now, 0.0, quantum);
-      isPlaying = false;
-      link->commitAppSessionState(session);
-      btnPlay.setButtonText("Play");
-      return;
-    }
-    // PLAY
-    auto now = link->clock().micros();
-    auto session = link->captureAppSessionState();
-    double currentBeat = session.beatAtTime(now, quantum);
-    transportStartBeat = currentBeat - beatsPlayedOnPause;
-    isPlaying = true;
-    btnPlay.setButtonText("Pause");
-    if (link->isEnabled()) {
-      logPanel.log("Transport: Waiting for Sync...", true);
-      pendingSyncStart = true;
-    } else {
-      logPanel.log("Transport: Playing (Internal)", true);
-      pendingSyncStart = false;
-      session.setIsPlayingAndRequestBeatAtTime(true, now, transportStartBeat,
-                                               quantum);
-      link->commitAppSessionState(session);
-      if (isOscConnected)
-        oscSender.send(oscConfig.ePlay.getText(), 1.0f);
-    }
-    grabKeyboardFocus();
-  };
-
-  btnStop.onClick = [this] {
-    if (!isPlaying && playbackCursor == 0)
-      return;
-    logPanel.log("Transport: Stopped", true);
-    auto now = link->clock().micros();
-    auto session = link->captureAppSessionState();
-    session.setIsPlayingAndRequestBeatAtTime(false, now, 0.0, quantum);
-    isPlaying = false;
-    btnPlay.setButtonText("Play");
-    stopPlayback();
-    link->commitAppSessionState(session);
-    if (isOscConnected)
-      oscSender.send(oscConfig.eStop.getText(), 1.0f);
-    grabKeyboardFocus();
-  };
-
-  btnPrev.onClick = [this] {
-    logPanel.log("Track: Previous", true);
-    bool wasPlaying = isPlaying;
-    loadMidiFile(juce::File(playlist.getPrevFile()));
-    if (wasPlaying) {
-      isPlaying = true;
-      btnPlay.setButtonText("Pause");
-    }
-  };
-  btnSkip.onClick = [this] {
-    logPanel.log("Track: Next", true);
-    bool wasPlaying = isPlaying;
-    loadMidiFile(juce::File(playlist.getNextFile()));
-    if (wasPlaying) {
-      isPlaying = true;
-      btnPlay.setButtonText("Pause");
-    }
   };
 
   // --- Components Add ---
+  trackGrid.setKeyboardComponent(&horizontalKeyboard);
   addAndMakeVisible(trackGrid);
   addAndMakeVisible(horizontalKeyboard);
   addAndMakeVisible(verticalKeyboard);
   addAndMakeVisible(logPanel);
   addAndMakeVisible(playlist);
   playlist.onLoopModeChanged = [this](juce::String state) {
-    logPanel.log("Playlist: " + state, true);
+    logPanel.log("! Playlist Mode: " + state, true);
   };
   addAndMakeVisible(sequencer);
 
   addAndMakeVisible(mixerViewport);
-  mixer.setBounds(0, 0, 16 * mixer.stripWidth, 150);
+  mixer.setBounds(0, 0, 16 * mixer.stripWidth, 300);
   mixerViewport.setViewedComponent(&mixer, false);
   mixerViewport.setScrollBarsShown(false, true);
 
@@ -620,11 +755,15 @@ MainComponent::MainComponent()
 
   // --- Arpeggiator ---
   addAndMakeVisible(btnArp);
+  btnArp.setButtonText("Latch");
+  btnArp.setClickingTogglesState(true);
+  btnArp.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
   btnArp.onClick = [this] {
     if (!btnArp.getToggleState()) {
       heldNotes.clear();
       noteArrivalOrder.clear();
       keyboardState.allNotesOff(getSelectedChannel());
+      logPanel.log("! Arp Latch: OFF", false);
     } else {
       heldNotes.clear();
       noteArrivalOrder.clear();
@@ -634,15 +773,27 @@ MainComponent::MainComponent()
           noteArrivalOrder.push_back(i);
         }
       }
+      logPanel.log("! Arp Latch: ON", false);
     }
   };
+
   addAndMakeVisible(btnArpSync);
+  btnArpSync.setButtonText("Sync");
+  btnArpSync.setClickingTogglesState(true);
+  btnArpSync.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
+  btnArpSync.onClick = [this] {
+    logPanel.log("! Arp Sync: " +
+                     juce::String(btnArpSync.getToggleState() ? "ON" : "OFF"),
+                 false);
+  };
+
   addAndMakeVisible(sliderArpSpeed);
   sliderArpSpeed.setSliderStyle(juce::Slider::RotaryVerticalDrag);
   sliderArpSpeed.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
   sliderArpSpeed.setRange(20, 1000, 1);
   sliderArpSpeed.setValue(400);
   sliderArpSpeed.setColour(juce::Slider::thumbColourId, Theme::accent);
+
   addAndMakeVisible(sliderArpVel);
   sliderArpVel.setSliderStyle(juce::Slider::RotaryVerticalDrag);
   sliderArpVel.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
@@ -664,11 +815,21 @@ MainComponent::MainComponent()
   cmbArpPattern.addItem("Random", 6);
   cmbArpPattern.addItem("Diverge", 4);
   cmbArpPattern.setSelectedId(1);
+  // Tighten dropdown
+  cmbArpPattern.setJustificationType(juce::Justification::centred);
+  cmbArpPattern.onChange = [this] {
+    logPanel.log("! Arp Pattern: " + cmbArpPattern.getText(), false);
+  };
 
   // --- Mixer Events ---
   mixer.onMixerActivity = [this](int ch, float val) {
-    sendSplitOscMessage(juce::MidiMessage::controllerEvent(ch, 7, (int)val));
-    logPanel.log("Mixer Ch" + juce::String(ch) + ": " + juce::String((int)val),
+    // When mixer is moved, send OSC mapped to the visual channel
+    int mappedCh = mixer.getMappedChannel(ch);
+    sendSplitOscMessage(juce::MidiMessage::controllerEvent(ch, 7, (int)val),
+                        mappedCh);
+    logPanel.log("Mixer Ch" + juce::String(ch) + " (Slot " +
+                     juce::String(mappedCh) +
+                     ") Vol: " + juce::String((int)val),
                  false);
   };
   mixer.onChannelToggle = [this](int ch, bool active) {
@@ -686,11 +847,67 @@ MainComponent::MainComponent()
   helpText.setReadOnly(true);
   helpText.setFont(juce::FontOptions(13.0f));
   helpText.setText("Patchworld Bridge");
-  helpViewport.setViewedComponent(&helpText, false);
+  helpViewport.setViewedComponent(&helpTextDisplay, false);
+  helpTextDisplay.setMultiLine(true);
+  helpTextDisplay.setReadOnly(true);
+  helpTextDisplay.setText("Instructions will be added here.");
+  helpTextDisplay.setColour(juce::TextEditor::backgroundColourId,
+                            juce::Colours::black.withAlpha(0.6f));
   addChildComponent(helpViewport);
 
+  // --- Tooltips ---
+  btnDash.setTooltip("Toggle Dashboard/Simple Mode");
+  btnCtrl.setTooltip("Open Control Page");
+  btnOscCfg.setTooltip("Open OSC Configuration");
+  btnHelp.setTooltip("Open Help Page");
+  btnPlay.setTooltip("Start Playback");
+  btnStop.setTooltip("Stop Playback");
+  btnPrev.setTooltip("Play Previous MIDI File");
+  btnSkip.setTooltip("Play Next MIDI File");
+  btnClearPR.setTooltip("Clear Playback Sequence");
+  btnResetBPM.setTooltip("Reset BPM to file's BPM or 120");
+  btnTapTempo.setTooltip("Tap tempo 4 times to set BPM");
+  btnPrOctUp.setTooltip("Increase Playback Octave");
+  btnPrOctDown.setTooltip("Decrease Playback Octave");
+  btnPanic.setTooltip("Send All Notes Off and All Sound Off");
+  btnConnect.setTooltip("Connect/Disconnect OSC");
+  btnRetrigger.setTooltip("Retrigger notes on Note Off");
+  btnGPU.setTooltip("Toggle GPU Rendering");
+  btnBlockMidiOut.setTooltip("Block MIDI output from playback");
+  btnLinkToggle.setTooltip("Toggle Ableton Link");
+  btnSplit.setTooltip("Split MIDI channel 1 notes (C4 and below to Ch2)");
+  btnPreventBpmOverride.setTooltip("Prevent MIDI files from changing tempo");
+  cmbQuantum.setTooltip("Ableton Link Quantum");
+  nudgeSlider.setTooltip("Nudge Link tempo temporarily");
+  btnArp.setTooltip("Toggle Arpeggiator Latch");
+  btnArpSync.setTooltip("Sync Arpeggiator to Link beat");
+  sliderArpSpeed.setTooltip("Arpeggiator Speed");
+  sliderArpVel.setTooltip("Arpeggiator Velocity");
+  cmbArpPattern.setTooltip("Arpeggiator Pattern");
+  sliderNoteDelay.setTooltip("Note Duration (Virtual Keyboard)");
+  cmbMidiIn.setTooltip("Select MIDI Input Device");
+  cmbMidiOut.setTooltip("Select MIDI Output Device");
+  cmbMidiCh.setTooltip("Select MIDI Channel for Output");
+  edIp.setTooltip("OSC Destination IP Address");
+  edPOut.setTooltip("OSC Destination Port");
+  edPIn.setTooltip("OSC Listening Port");
+  lblLocalIpDisplay.setTooltip("Your local IP address");
+  tempoSlider.setTooltip("Set Global Tempo");
+  sliderPitchH.setTooltip("Pitch Bend (Horizontal Keyboard)");
+  sliderModH.setTooltip("Modulation (Horizontal Keyboard)");
+  sliderPitchV.setTooltip("Pitch Bend (Vertical Keyboard)");
+  sliderModV.setTooltip("Modulation (Vertical Keyboard)");
+  vol1Simple.setTooltip("Simple Mode Volume 1");
+  vol2Simple.setTooltip("Simple Mode Volume 2");
+  txtVol1Osc.setTooltip("OSC Address for Volume 1");
+  txtVol2Osc.setTooltip("OSC Address for Volume 2");
+  btnMidiThru.setTooltip("Enable MIDI Thru (Echo input to output)");
+  btnVol1CC.setTooltip("Send CC20 for Volume 1");
+  btnVol2CC.setTooltip("Send CC21 for Volume 2");
+  btnMidiClock.setTooltip("Send MIDI Clock (F8) to MIDI Out");
+
   // --- Final Init ---
-  setSize(800, 630);
+  setSize(800, 750);
   link->enable(true);
   link->enableStartStopSync(true);
   juce::Timer::startTimer(40);
@@ -698,15 +915,27 @@ MainComponent::MainComponent()
   currentView = AppView::Dashboard;
   updateVisibility();
   resized();
+
+  btnMidiScaling.setButtonText("Scaling 1");
+  btnMidiScaling.setColour(juce::TextButton::buttonColourId,
+                           juce::Colours::transparentBlack);
+  btnMidiScaling.setColour(juce::TextButton::textColourOffId, Theme::accent);
+
+  addAndMakeVisible(btnMidiScalingToggle);
+  btnMidiScalingToggle.setButtonText("Scale: 0-1 (Default)");
+  btnMidiScalingToggle.onClick = [this] {
+    isMidiScaling127 = btnMidiScalingToggle.getToggleState();
+    btnMidiScalingToggle.setButtonText(
+        isMidiScaling127 ? "Scale: 0-127 (Raw)" : "Scale: 0-1 (Default)");
+    logPanel.log("! MIDI Scaling: " +
+                     juce::String(isMidiScaling127 ? "0-127" : "0-1"),
+                 true);
+  };
 }
 
 //==============================================================================
 // HELPER FUNCTIONS
 //==============================================================================
-double MainComponent::getDurationFromVelocity(float velocity0to1) {
-  return 50.0 + (velocity0to1 * 1950.0);
-}
-
 void MainComponent::mouseDown(const juce::MouseEvent &) { grabKeyboardFocus(); }
 
 bool MainComponent::keyPressed(const juce::KeyPress &key, Component *) {
@@ -750,18 +979,28 @@ int MainComponent::matchOscChannel(const juce::String &pattern,
   return -1;
 }
 
+//==============================================================================
+// OSC MESSAGE HANDLING (FIXED 1-16 & MULTI-ARG CC)
+//==============================================================================
 void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
   juce::String addr = m.getAddressPattern().toString();
-  float val = (m.size() > 0 && m[0].isFloat32()) ? m[0].getFloat32() : 0.0f;
-  float vel = (m.size() > 1 && m[1].isFloat32()) ? m[1].getFloat32() : 0.0f;
-  juce::String argVal = (m.size() > 0 && m[0].isFloat32())
-                            ? juce::String(m[0].getFloat32(), 2)
-                            : "";
 
-  juce::MessageManager::callAsync(
-      [this, addr, argVal] { logPanel.log(addr + " " + argVal, false); });
+  // LOGGING (Limited to avoid spam)
+  if (!addr.contains("wheel") && !addr.contains("press")) {
+    juce::String logStr = "! OSC Rx: " + addr;
+    for (int i = 0; i < m.size(); ++i) {
+      logStr += " ";
+      if (m[i].isFloat32())
+        logStr += juce::String(m[i].getFloat32(), 2);
+      else if (m[i].isInt32())
+        logStr += juce::String(m[i].getInt32());
+      else if (m[i].isString())
+        logStr += m[i].getString();
+    }
+    juce::MessageManager::callAsync(
+        [this, logStr] { logPanel.log(logStr, false); });
+  }
 
-  // Handle Playback Controls
   if (addr == oscConfig.ePlay.getText()) {
     juce::MessageManager::callAsync([this] { btnPlay.onClick(); });
     return;
@@ -779,55 +1018,195 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
     return;
   }
 
-  // Handle Simple Mode Faders (Vol1 / Vol2)
-  if (addr == txtVol1Osc.getText()) {
-    juce::MessageManager::callAsync([this, val] {
-      vol1Simple.setValue(val * 127.0f, juce::dontSendNotification);
-    });
-    return;
+  // Extract Value from 1st arg (float or int) for single-value messages
+  float valArg0 =
+      (m.size() > 0 && m[0].isFloat32())
+          ? m[0].getFloat32()
+          : (m.size() > 0 && m[0].isInt32() ? (float)m[0].getInt32() : 0.0f);
+  // Normalize if 0-127
+  float normValArg0 = (valArg0 > 1.0f) ? valArg0 / 127.0f : valArg0;
+
+  // --- MIDI CONVERSION LOOP 1-16 ---
+  for (int i = 1; i <= 16; ++i) {
+    juce::String sCh = juce::String(i);
+
+    // Extract Value safely (Int 0-127 vs Float 0-1.0)
+    auto getDynamicValue = [&](const juce::OSCMessage &msg,
+                               int argIdx) -> float {
+      if (argIdx >= msg.size())
+        return 0.0f;
+      auto &arg = msg[argIdx];
+
+      // SCALING LOGIC:
+      // If isMidiScaling127 (True) -> Input is 0-127. We divide by 127 to get
+      // internal 0-1. If !isMidiScaling127 (False) -> Input is 0-1. We clamp.
+
+      float rawVal = 0.0f;
+      if (arg.isFloat32())
+        rawVal = arg.getFloat32();
+      else if (arg.isInt32())
+        rawVal = (float)arg.getInt32();
+
+      if (isMidiScaling127) {
+        // Expecting 0-127 input
+        return juce::jlimit(0.0f, 1.0f, rawVal / 127.0f);
+      } else {
+        // Expecting 0-1 input (Legacy)
+        if (arg.isInt32())
+          return juce::jlimit(0.0f, 1.0f,
+                              rawVal / 127.0f); // Ints are likely 0-127 anyway?
+        return juce::jlimit(0.0f, 1.0f, rawVal);
+      }
+    };
+
+    // NOTE ON: /chXn [note] [vel(optional)]
+    if (addr == oscConfig.eRXn.getText().replace("{X}", sCh)) {
+      int note =
+          (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
+      float vel = (m.size() > 1) ? getDynamicValue(m, 1) : 0.8f;
+
+      isHandlingOsc = true;
+      if (vel <= 0.001f) {
+        keyboardState.noteOff(i, note, 0.0f);
+      } else {
+        keyboardState.noteOn(i, note, vel);
+        double durationMs = this->getDurationFromVelocity(vel);
+        juce::ScopedLock sl(midiLock);
+        scheduledNotes.push_back(
+            {i, note, juce::Time::getMillisecondCounterHiRes() + durationMs});
+      }
+      isHandlingOsc = false;
+      return;
+    }
+
+    // EXPLICIT NOTE OFF
+    if (addr == oscConfig.eRXnoff.getText().replace("{X}", sCh)) {
+      int note =
+          (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
+      isHandlingOsc = true;
+      keyboardState.noteOff(i, note, 0.0f);
+      isHandlingOsc = false;
+      return;
+    }
+
+    // CC: /chXc [ccNum] [val]
+    if (addr == oscConfig.eRXc.getText().replace("{X}", sCh)) {
+      int ccNum =
+          (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
+      lastReceivedCC[i] = ccNum;
+      if (m.size() > 1) {
+        int ccVal = (int)(getDynamicValue(m, 1) * 127.0f);
+        if (midiOutput)
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::controllerEvent(i, ccNum, ccVal));
+      }
+      return;
+    }
+
+    // CC Value Only
+    if (addr == oscConfig.eRXcv.getText().replace("{X}", sCh)) {
+      int ccNum = lastReceivedCC[i];
+      int ccVal = (int)(getDynamicValue(m, 0) * 127.0f);
+      if (midiOutput)
+        midiOutput->sendMessageNow(
+            juce::MidiMessage::controllerEvent(i, ccNum, ccVal));
+      return;
+    }
+
+    // Pitch Wheel
+    if (addr == oscConfig.eRXwheel.getText().replace("{X}", sCh)) {
+      if (midiOutput)
+        midiOutput->sendMessageNow(juce::MidiMessage::pitchWheel(
+            i, (int)(getDynamicValue(m, 0) * 16383.0f)));
+      return;
+    }
+
+    // Aftertouch
+    if (addr == oscConfig.eRXpress.getText().replace("{X}", sCh)) {
+      if (midiOutput)
+        midiOutput->sendMessageNow(juce::MidiMessage::channelPressureChange(
+            i, (int)(getDynamicValue(m, 0) * 127.0f)));
+      return;
+    }
   }
-  if (addr == txtVol2Osc.getText()) {
-    juce::MessageManager::callAsync([this, val] {
-      vol2Simple.setValue(val * 127.0f, juce::dontSendNotification);
-    });
+}
+
+//==============================================================================
+// MIDI OUT LOGIC
+//==============================================================================
+void MainComponent::handleNoteOn(juce::MidiKeyboardState *, int ch, int note,
+                                 float vel) {
+  if (vel == 0.0f) {
+    handleNoteOff(nullptr, ch, note, 0.0f);
     return;
   }
 
-  // --- STANDARD MIDI LOGIC ---
-  float scaledVal = (val <= 1.0f && val > 0.0f) ? val * 127.0f : val;
-  int scaledInt = (int)scaledVal;
+  // SPLIT LOGIC FIX:
+  // User reported: "one side of keyboard being sent to midi and the other
+  // deactivated". Consolidate target determination.
 
-  // Handle Configurable Note On
-  int ch = matchOscChannel(oscConfig.eRXn.getText(), addr);
-  if (ch > 0) {
-    float velocity = (m.size() > 1) ? vel : 0.8f;
-    isHandlingOsc = true;
-    keyboardState.noteOn(ch, scaledInt, velocity);
-    isHandlingOsc = false;
-    if (midiOutput)
-      midiOutput->sendMessageNow(
-          juce::MidiMessage::noteOn(ch, scaledInt, velocity));
+  if (btnSplit.getToggleState() && ch == 1) {
+    if (note < 64)
+      ch = 2; // Split Point
+  }
+
+  logPanel.log("! IN Note On: " + juce::String(note) + " (Ch" +
+                   juce::String(ch) + ")",
+               false);
+
+  if (btnArp.getToggleState()) {
+    heldNotes.add(note);
+    noteArrivalOrder.push_back(note);
+  } else {
+    // Send to OSC (Bidirectional) and MIDI Out
+    if (!isHandlingOsc)
+      sendSplitOscMessage(juce::MidiMessage::noteOn(ch, note, vel), ch);
+    // Force 'ch' into sendSplitOscMessage to ensure it uses the SPLIT channel.
+
+    if (midiOutput && !btnBlockMidiOut.getToggleState()) {
+      // Send directly to Hardware.
+      // Ensure this channel is not forcefully blocked by Mixer?
+      // Actually, Mixer strips control OSC mapping mostly, but for live play we
+      // usually want thru. User said "juce piano roll acts as a midi out
+      // device".
+      midiOutput->sendMessageNow(juce::MidiMessage::noteOn(ch, note, vel));
+    }
+  }
+}
+
+void MainComponent::handleNoteOff(juce::MidiKeyboardState *, int ch, int note,
+                                  float vel) {
+  if (btnArp.getToggleState()) {
+    heldNotes.removeFirstMatchingValue(note);
     return;
   }
 
-  // Handle Configurable Note Off
-  ch = matchOscChannel(oscConfig.eRXnoff.getText(), addr);
-  if (ch > 0) {
-    isHandlingOsc = true;
-    keyboardState.noteOff(ch, scaledInt, 0.0f);
-    isHandlingOsc = false;
-    if (midiOutput)
-      midiOutput->sendMessageNow(juce::MidiMessage::noteOff(ch, scaledInt));
-    return;
+  // CRITICAL FIX: Match the Split logic from handleNoteOn
+  if (btnSplit.getToggleState() && ch == 1) {
+    if (note < 64)
+      ch = 2;
   }
 
-  // Handle Configurable Pitch Wheel
-  ch = matchOscChannel(oscConfig.eRXwheel.getText(), addr);
-  if (ch > 0) {
-    if (midiOutput)
-      midiOutput->sendMessageNow(
-          juce::MidiMessage::pitchWheel(ch, (int)(val * 16383.0f)));
-    return;
+  heldNotes.removeFirstMatchingValue(note);
+  logPanel.log("! IN Note Off: " + juce::String(note) + " (Ch" +
+                   juce::String(ch) + ")",
+               false);
+
+  if (btnRetrigger.getToggleState()) {
+    juce::MidiMessage m = juce::MidiMessage::noteOn(ch, note, 100.0f / 127.0f);
+    if (!isHandlingOsc)
+      sendSplitOscMessage(m, ch);
+    if (midiOutput && !btnBlockMidiOut.getToggleState())
+      midiOutput->sendMessageNow(m);
+  } else {
+    juce::MidiMessage m = juce::MidiMessage::noteOff(ch, note, vel);
+    // Send to OSC (Bidirectional) and MIDI Out
+    if (!isHandlingOsc)
+      sendSplitOscMessage(m, ch);
+
+    // Centralized MIDI Hardware Output
+    if (midiOutput && !btnBlockMidiOut.getToggleState())
+      midiOutput->sendMessageNow(m);
   }
 }
 
@@ -836,32 +1215,47 @@ void MainComponent::sendSplitOscMessage(const juce::MidiMessage &m,
   if (!isOscConnected)
     return;
 
-  auto sendTo = [this, &m](int rawCh) {
-    int ch = mixer.getMappedChannel(rawCh);
+  auto sendTo = [this, &m, overrideChannel](int rawCh) {
+    // If overrideChannel is provided, it's ALREADY MAPPED by the caller
+    // (hiResTimer/Mixer) If NOT provided (-1), we map it here.
+    int ch = (overrideChannel != -1) ? overrideChannel
+                                     : mixer.getMappedChannel(rawCh);
+
     if (ch < 1 || ch > 16)
       ch = 1;
     juce::String customName = mixer.getChannelName(ch);
+    juce::String logMsg = "! OSC OUT (Ch" + juce::String(ch) + "): ";
+
+    float scale = isMidiScaling127 ? 1.0f : 127.0f;
 
     if (m.isNoteOn()) {
       oscSender.send(oscConfig.eTXn.getText().replace("{X}", customName),
-                     (float)m.getNoteNumber());
+                     (float)m.getNoteNumber(), m.getVelocity() / scale);
       oscSender.send(oscConfig.eTXv.getText().replace("{X}", customName),
-                     m.getVelocity() / 127.0f);
+                     m.getVelocity() / scale);
+      logMsg += "Note On " + juce::String(m.getNoteNumber());
     } else if (m.isNoteOff()) {
       oscSender.send(oscConfig.eTXoff.getText().replace("{X}", customName),
                      (float)m.getNoteNumber());
+      logMsg += "Note Off " + juce::String(m.getNoteNumber());
     } else if (m.isController()) {
       oscSender.send(oscConfig.eTXcc.getText().replace("{X}", customName),
-                     (float)m.getControllerNumber());
+                     (float)m.getControllerNumber(),
+                     (float)m.getControllerValue() / scale);
       oscSender.send(oscConfig.eTXccv.getText().replace("{X}", customName),
-                     (float)m.getControllerValue() / 127.0f);
+                     (float)m.getControllerValue() / scale);
+      logMsg += "CC " + juce::String(m.getControllerNumber());
     } else if (m.isPitchWheel()) {
+      float pwScale = isMidiScaling127 ? 1.0f : 16383.0f;
       oscSender.send(oscConfig.eTXp.getText().replace("{X}", customName),
-                     (float)m.getPitchWheelValue() / 16383.0f);
+                     (float)m.getPitchWheelValue() / pwScale);
+      logMsg += "Pitch Wheel";
     } else if (m.isAftertouch()) {
-      oscSender.send(oscConfig.eTXpoly.getText().replace("{X}", customName),
-                     (float)m.getNoteNumber(), m.getAfterTouchValue() / 127.0f);
+      oscSender.send(oscConfig.eTXpr.getText().replace("{X}", customName),
+                     (float)m.getAfterTouchValue() / scale);
+      logMsg += "Pressure";
     }
+    logPanel.log(logMsg, false);
   };
 
   int baseCh = (overrideChannel != -1)
@@ -883,71 +1277,31 @@ void MainComponent::sendSplitOscMessage(const juce::MidiMessage &m,
   }
 }
 
-void MainComponent::handleNoteOn(juce::MidiKeyboardState *, int ch, int note,
-                                 float vel) {
-  if (vel == 0.0f) {
-    handleNoteOff(nullptr, ch, note, 0.0f);
-    return;
-  }
-  int adj = juce::jlimit(0, 127, note + (virtualOctaveShift * 12));
-
-  if (btnSplit.getToggleState() && ch == 1) {
-    if (adj < 64)
-      ch = 2;
-  }
-
-  logPanel.log("Note On: " + juce::String(note), false);
-
-  if (btnArp.getToggleState()) {
-    heldNotes.add(adj);
-    noteArrivalOrder.push_back(adj);
-  } else {
-    if (!isHandlingOsc)
-      sendSplitOscMessage(juce::MidiMessage::noteOn(ch, adj, vel));
-    if (midiOutput)
-      midiOutput->sendMessageNow(juce::MidiMessage::noteOn(ch, adj, vel));
-  }
-}
-
-void MainComponent::handleNoteOff(juce::MidiKeyboardState *, int ch, int note,
-                                  float vel) {
-  int adj = juce::jlimit(0, 127, note + (virtualOctaveShift * 12));
-  if (btnArp.getToggleState())
-    return;
-
-  heldNotes.removeFirstMatchingValue(adj);
-
-  if (btnRetrigger.getToggleState()) {
-    juce::MidiMessage m = juce::MidiMessage::noteOn(ch, adj, 100.0f / 127.0f);
-    if (!isHandlingOsc)
-      sendSplitOscMessage(m);
-    if (midiOutput)
-      midiOutput->sendMessageNow(m);
-  } else {
-    juce::MidiMessage m = juce::MidiMessage::noteOff(ch, adj, vel);
-    if (!isHandlingOsc)
-      sendSplitOscMessage(m);
-    if (midiOutput)
-      midiOutput->sendMessageNow(m);
-  }
-}
-
+//==============================================================================
+// TIMER CALLBACKS
+//==============================================================================
+//==============================================================================
 void MainComponent::hiResTimerCallback() {
   double nowMs = juce::Time::getMillisecondCounterHiRes();
+
+  // --- PROCESS SCHEDULED NOTE OFFS ---
   {
     juce::ScopedLock sl(midiLock);
     for (auto it = scheduledNotes.begin(); it != scheduledNotes.end();) {
       if (nowMs >= it->releaseTimeMs) {
-        if (midiOutput)
-          midiOutput->sendMessageNow(
-              juce::MidiMessage::noteOff(it->channel, it->note));
+        // keyboardState.noteOff triggers handleNoteOff listener,
+        // which handles both OSC logging and MIDI Hardware Out.
+        isHandlingOsc = true;
         keyboardState.noteOff(it->channel, it->note, 0.0f);
+        isHandlingOsc = false;
+
         it = scheduledNotes.erase(it);
       } else {
         ++it;
       }
     }
   }
+
   for (auto it = activeVirtualNotes.begin(); it != activeVirtualNotes.end();) {
     if (nowMs >= it->releaseTime) {
       keyboardState.noteOff(it->channel, it->note, 0.0f);
@@ -957,111 +1311,390 @@ void MainComponent::hiResTimerCallback() {
     }
   }
 
-  if (!link)
-    return;
-  auto session = link->captureAppSessionState();
-  auto now = link->clock().micros();
-  double quantum = 4.0;
-  double currentBeat = session.beatAtTime(now, quantum);
+  // --- CLOCK GEN ---
+  if (btnMidiClock.getToggleState() && midiOutput) {
+    double currentBpm = (link && link->isEnabled())
+                            ? link->captureAppSessionState().tempo()
+                            : bpmVal.get();
+    double msPerTick = (60000.0 / currentBpm) / 24.0; // 24 PPQ
 
-  if (isPlaying) {
-    if (pendingSyncStart) {
-      if (session.phaseAtTime(now, quantum) < 0.05) {
-        transportStartBeat = currentBeat - beatsPlayedOnPause;
-        lastProcessedBeat = -1.0;
-        pendingSyncStart = false;
-        if (!session.isPlaying()) {
-          session.setIsPlayingAndRequestBeatAtTime(true, now, currentBeat,
-                                                   quantum);
-          link->commitAppSessionState(session);
+    static double lastClockSendTime = nowMs;
+    double timeSinceLastTick = nowMs - lastClockSendTime;
+
+    if (timeSinceLastTick >= msPerTick) {
+      int numTicksToSend = (int)(timeSinceLastTick / msPerTick);
+      for (int i = 0; i < numTicksToSend; ++i) {
+        midiOutput->sendMessageNow(juce::MidiMessage(0xF8)); // MIDI Clock
+      }
+      lastClockSendTime += (numTicksToSend * msPerTick);
+    }
+  }
+
+  // --- ARPEGGIATOR LOGIC ---
+  if (btnArp.getToggleState() && !heldNotes.isEmpty()) {
+    double arpIntervalMs = 0.0;
+    if (btnArpSync.getToggleState() && link && link->isEnabled()) {
+      double currentBpm = bpmVal.get();
+      if (currentBpm < 1.0)
+        currentBpm = 120.0;
+      arpIntervalMs = (60000.0 / currentBpm) / 4.0;
+    } else {
+      double spd = sliderArpSpeed.getValue();
+      if (spd < 1.0)
+        spd = 20.0;
+      arpIntervalMs = 60000.0 / spd;
+    }
+
+    if (nowMs - lastArpNoteTime >= arpIntervalMs) {
+      lastArpNoteTime = nowMs;
+      heldNotes.sort();
+      int numNotes = heldNotes.size();
+      int patternId = cmbArpPattern.getSelectedId(); // 1=Up, 2=Down, 6=Random
+
+      if (patternId == 6) {
+        currentArpIndex = juce::Random::getSystemRandom().nextInt(numNotes);
+      } else if (patternId == 2) {
+        currentArpIndex--;
+        if (currentArpIndex < 0)
+          currentArpIndex = numNotes - 1;
+      } else {
+        currentArpIndex++;
+        if (currentArpIndex >= numNotes)
+          currentArpIndex = 0;
+      }
+
+      int note = heldNotes[currentArpIndex];
+      int ch = getSelectedChannel();
+      float vel = (float)sliderArpVel.getValue() / 127.0f;
+      if (vel <= 0.001f)
+        vel = 0.8f;
+
+      juce::MidiMessage m = juce::MidiMessage::noteOn(ch, note, vel);
+
+      if (!isHandlingOsc)
+        sendSplitOscMessage(m);
+      if (midiOutput && !btnBlockMidiOut.getToggleState())
+        midiOutput->sendMessageNow(m);
+
+      juce::ScopedLock sl(midiLock);
+      scheduledNotes.push_back({ch, note, nowMs + (arpIntervalMs * 0.8)});
+    }
+  }
+
+  // --- SEQUENCER & PLAYBACK CORE ---
+  double quantum = 4.0;
+  double currentBeat = 0.0;
+  bool isLinkEnabled = (link && link->isEnabled());
+
+  // Calculate Beat Position
+  if (isLinkEnabled) {
+    auto session = link->captureAppSessionState();
+    auto now = link->clock().micros();
+    currentBeat = session.beatAtTime(now, quantum);
+
+    if (isPlaying) {
+      if (pendingSyncStart) {
+        // If no peers, start immediately. Otherwise wait for bar phase.
+        bool shouldStart = (link->numPeers() == 0) ||
+                           (session.phaseAtTime(now, quantum) < 0.05);
+        if (shouldStart) {
+          transportStartBeat = currentBeat - beatsPlayedOnPause;
+          lastProcessedBeat = -1.0;
+          playbackCursor = 0;
+          pendingSyncStart = false;
+          if (!session.isPlaying()) {
+            session.setIsPlayingAndRequestBeatAtTime(true, now, currentBeat,
+                                                     quantum);
+            link->commitAppSessionState(session);
+          }
+          if (isOscConnected)
+            oscSender.send(oscConfig.ePlay.getText(), 1.0f);
+          if (midiOutput && btnMidiClock.getToggleState())
+            midiOutput->sendMessageNow(juce::MidiMessage(0xFA)); // Start
+        } else {
+          return; // Waiting for sync
         }
+      }
+    }
+  } else {
+    // Internal Lock
+    if (isPlaying) {
+      if (pendingSyncStart) {
+        pendingSyncStart = false;
+        internalPlaybackStartTimeMs = nowMs;
+        lastProcessedBeat = -1.0;
         if (isOscConnected)
           oscSender.send(oscConfig.ePlay.getText(), 1.0f);
+        if (midiOutput && btnMidiClock.getToggleState())
+          midiOutput->sendMessageNow(juce::MidiMessage(0xFA)); // Start
+      }
+      double elapsedMs = nowMs - internalPlaybackStartTimeMs;
+      double currentBpm = bpmVal.get();
+      if (currentBpm < 1.0)
+        currentBpm = 120.0;
+      double beatsPerMs = currentBpm / 60000.0;
+      currentBeat = (elapsedMs * beatsPerMs) + beatsPlayedOnPause;
+    } else {
+      currentBeat = beatsPlayedOnPause;
+    }
+  }
+
+  // --- ALWAYS UPDATE PLAYHEAD & SEQUENCER IF PLAYBACK IS RUNNING ---
+  if (isPlaying) {
+    // Wait for Link Sync if pending
+    if (pendingSyncStart && isLinkEnabled) {
+      auto session = link->captureAppSessionState();
+      auto now = link->clock().micros();
+      // Start on next beat/bar boundary (or immediately if no peers)
+      bool shouldStart =
+          (link->numPeers() == 0) || (session.phaseAtTime(now, quantum) < 0.05);
+      if (shouldStart) {
+        transportStartBeat = currentBeat - beatsPlayedOnPause;
+        lastProcessedBeat = -1.0;
+        playbackCursor = 0; // Fix: Reset cursor for visual sync
+        pendingSyncStart = false;
+        if (isOscConnected)
+          oscSender.send(oscConfig.ePlay.getText(), 1.0f);
+        if (midiOutput && btnMidiClock.getToggleState())
+          midiOutput->sendMessageNow(juce::MidiMessage(0xFA));
       } else {
-        return;
+        return; // Stay in pending state
       }
     }
 
-    double playbackBeats = currentBeat - transportStartBeat;
-    double rangeEnd = playbackBeats;
+    // Sync the visual grid with internal/link beats
+    double pbRelative = currentBeat - transportStartBeat;
+    trackGrid.playbackCursor = (float)(pbRelative * ticksPerQuarterNote);
+    trackGrid.octaveShift = pianoRollOctaveShift;
 
-    juce::ScopedLock sl(midiLock);
-    while (playbackCursor < playbackSeq.getNumEvents()) {
-      auto *ev = playbackSeq.getEventPointer(playbackCursor);
-      double eventBeat = ev->message.getTimeStamp() / ticksPerQuarterNote;
-      if (eventBeat >= rangeEnd)
-        break;
+    // 1. Sequencer Trigger
+    double beatForSeq = currentBeat;
+    double stepMultiplier = 4.0; // Default 1/16th
 
-      if (eventBeat >= lastProcessedBeat) {
-        int rawCh = ev->message.getChannel();
-        int ch = mixer.getMappedChannel(rawCh);
+    if (sequencer.activeRollDiv > 0) {
+      if (sequencer.getMode() == StepSequencer::Time) {
+        // Change Speed: 1/4=1x, 1/8=2x, 1/16=4x, 1/32=8x
+        stepMultiplier = (double)sequencer.activeRollDiv / 4.0;
+      } else if (sequencer.getMode() == StepSequencer::Loop) {
+        // Loop/Stutter: constrain beatForSeq to the window of the roll divisor
+        // e.g. if 1/4 (div 4), we loop within the current 1/4 note
+        double loopLen = 4.0 / (double)sequencer.activeRollDiv;
+        // e.g. div 4 -> len 1.0 (1 beat). div 8 -> len 0.5 (1/8th)
+        beatForSeq =
+            std::floor(currentBeat / loopLen) * loopLen + // Base of window
+            std::fmod(currentBeat, loopLen);              // Local phase
 
-        // APPLY OCTAVE SHIFT
-        int n = ev->message.getNoteNumber();
-        if (ev->message.isNoteOnOrOff()) {
-          n = juce::jlimit(0, 127, n + (pianoRollOctaveShift * 12));
-          auto mCopy = ev->message;
-          mCopy.setNoteNumber(n);
+        // Actually, pure fmod is better for "Stuttering the CURRENT window":
+        // We want to lock it to the "start" of the roll press?
+        // Simpler approach: modulo the beat time.
+        // beatForSeq = std::floor(transportStartBeat) + std::fmod(currentBeat,
+        // loopLen); Let's stick to simple beat wrapping for now:
+        beatForSeq = std::fmod(currentBeat, loopLen * sequencer.numSteps / 4.0);
+        // Wait, "Loop" often means "Repeating the segment".
+        // Let's implement a simple "Repeat the last 1/X interval" effect.
+        // If I hold 1/4, it repeats the current quarter note.
+        beatForSeq =
+            (double)((int)(currentBeat * (double)sequencer.activeRollDiv /
+                           4.0)) /
+                ((double)sequencer.activeRollDiv / 4.0) +
+            std::fmod(currentBeat, 4.0 / (double)sequencer.activeRollDiv);
+      }
+    }
 
-          if (btnSplit.getToggleState() && ch == 1) {
-            if (n < 64)
-              ch = 2;
-          }
+    // Recalculate based on mode
+    int currentStepPos =
+        (int)(beatForSeq * stepMultiplier) % sequencer.numSteps;
 
-          juce::String logMsg = mCopy.isNoteOn() ? "Note On" : "Note Off";
-          logPanel.log(logMsg + ": " + juce::String(n), false);
+    // ROLL MODE: Retrigger logic
+    bool scaleRoll = (sequencer.getMode() == StepSequencer::Roll &&
+                      sequencer.activeRollDiv > 0);
 
-          if (mixer.isChannelActive(ch)) {
-            sendSplitOscMessage(mCopy, ch);
+    if (scaleRoll) {
+      // Calculation for Roll Sub-steps
+      double rollRate =
+          (double)sequencer.activeRollDiv / 4.0; // e.g. 32 -> 8x speed (1/32)
+      int rollSubStep = (int)(currentBeat * rollRate * 4.0) % 2;
+      // Just simple ratchet: fire if we are crossing a sub-threshold
+      // Or simpler: The sequencer step stays same (Time is normal 1/16), but we
+      // re-fire.
+
+      currentStepPos =
+          (int)(currentBeat * 4.0) %
+          sequencer.numSteps; // Force normal time for Roll background
+      // If active step, we check roll pulse
+      if (sequencer.isStepActive(currentStepPos)) {
+        // Check for sub-tick
+        double subTick =
+            std::fmod(currentBeat * 4.0, 4.0 / (double)sequencer.activeRollDiv);
+        // Too complex for reliable timing in this callback without state.
+        // Alternative: Use a fast Pulse based on system time?
+      }
+    }
+
+    // Simplified Logic for Reliability:
+    // TIME: speeds up/slows down the head.
+    // LOOP: Jumps head back.
+    // ROLL: rapid fire.
+
+    if (sequencer.activeRollDiv > 0) {
+      if (sequencer.getMode() == StepSequencer::Time) {
+        stepMultiplier = (double)sequencer.activeRollDiv / 4.0;
+        currentStepPos =
+            (int)(currentBeat * stepMultiplier) % sequencer.numSteps;
+      } else if (sequencer.getMode() == StepSequencer::Loop) {
+        // LOOP MODE: Repeat the segment.
+        // If I press 1/4 (Div 4), I want to loop the current 1/4 note.
+        // Segment Length = 4.0 / activeRollDiv.
+        double loopLen = 4.0 / (double)sequencer.activeRollDiv;
+
+        // Calculate the "Start Beat" of the current segment locally
+        // We want to lock to the grid.
+        // If currentBeat is 1.25 and I press 1/4 (len 1.0), I want to
+        // repeat 1.0-2.0? Or repeat 1.0-1.25 forever? Usually "Beat Repeat"
+        // repeats the *last* captured buffer or the *current* grid segment.
+        // Let's loop the *current grid segment*.
+        double segmentStart = std::floor(currentBeat / loopLen) * loopLen;
+
+        // The "effective" beat for the sequencer should loop within
+        // [segmentStart, segmentStart + loopLen] But simpler: just modulo the
+        // time? If we just mod, we look at the beginning of the sequence. We
+        // need to wrap `currentBeat` relative to `segmentStart`.
+
+        // Wait, if I am at beat 14.5 and press Loop 1/4.
+        // I want to hear 14.0 -> 15.0 repeating?
+        // Or just 14.0->14.25?
+
+        // Let's implement: Loop the current step-window.
+        // currentStepPos = (int)(segmentStart + std::fmod(currentBeat,
+        // loopLen)) ...
+
+        // Let's try:
+        beatForSeq = segmentStart + std::fmod(currentBeat, loopLen);
+        currentStepPos = (int)(beatForSeq * 4.0) % sequencer.numSteps;
+      }
+    }
+
+    if (currentStepPos != sequencer.currentStep) {
+      sequencer.setActiveStep(currentStepPos);
+      if (sequencer.isStepActive(currentStepPos)) {
+        int note = (int)sequencer.noteSlider.getValue();
+
+        // ROLL MODE HANDLING: Burst fire?
+        // Since we are in hiResTimer, we might miss 1/32 notes if we only fire
+        // on step change. But for 1/16 base step, we fire once.
+
+        // Standard Fire
+        keyboardState.noteOn(1, note, 1.0f);
+        juce::ScopedLock sl(midiLock);
+        scheduledNotes.push_back({1, note, nowMs + 100.0});
+
+        // Send to OSC/MIDI
+        if (!isHandlingOsc) {
+          sendSplitOscMessage(juce::MidiMessage::noteOn(1, note, 1.0f));
+          if (midiOutput && !btnBlockMidiOut.getToggleState())
+            midiOutput->sendMessageNow(
+                juce::MidiMessage::noteOn(1, note, 1.0f));
+        }
+      }
+    }
+
+    // ROLL MODE CONTINUOUS FIRE
+    if (sequencer.getMode() == StepSequencer::Roll &&
+        sequencer.activeRollDiv > 0 && isPlaying) {
+      // Logic: Fire fast repeats if the CURRENT step is active
+      int normalStep = (int)(currentBeat * 4.0) % sequencer.numSteps;
+      if (sequencer.isStepActive(normalStep)) {
+        // Ratchet logic
+        double rollInterval =
+            (240000.0 / bpmVal.get()) / (double)sequencer.activeRollDiv; // ms
+        // We need a specialized state to track roll fires.
+        // For now, let's skip complex ratcheting to avoid cluttering
+        // MainComponent too much and verify basic Time/Loop first as requested.
+        // *User asked for Roll*. I should try.
+        // using `lastArpNoteTime` like logic?
+        static double lastRollTime = 0;
+        if (nowMs - lastRollTime > rollInterval) {
+          lastRollTime = nowMs;
+          int note = (int)sequencer.noteSlider.getValue();
+          keyboardState.noteOn(1, note, 1.0f);
+          scheduledNotes.push_back({1, note, nowMs + (rollInterval * 0.5)});
+          if (!isHandlingOsc) {
+            sendSplitOscMessage(juce::MidiMessage::noteOn(1, note, 1.0f));
             if (midiOutput && !btnBlockMidiOut.getToggleState())
-              midiOutput->sendMessageNow(mCopy);
-          }
-        } else {
-          // CC / Pitch
-          if (mixer.isChannelActive(ch)) {
-            sendSplitOscMessage(ev->message, ch);
-            if (midiOutput && !btnBlockMidiOut.getToggleState())
-              midiOutput->sendMessageNow(ev->message);
+              midiOutput->sendMessageNow(
+                  juce::MidiMessage::noteOn(1, note, 1.0f));
           }
         }
       }
-      playbackCursor++;
     }
-    lastProcessedBeat = rangeEnd;
-    if (playbackCursor >= playbackSeq.getNumEvents() && sequenceLength > 0) {
-      if (playlist.playMode == MidiPlaylist::LoopOne) {
-        playbackCursor = 0;
-        lastProcessedBeat = -1.0;
-        transportStartBeat = std::floor(currentBeat / quantum) * quantum;
-        if (transportStartBeat < currentBeat)
-          transportStartBeat += quantum;
-      } else if (playlist.playMode == MidiPlaylist::LoopAll) {
-        isPlaying = false;
-        session.setIsPlayingAndRequestBeatAtTime(false, now, currentBeat,
-                                                 quantum);
-        juce::MessageManager::callAsync([this] { btnSkip.onClick(); });
-      } else {
-        isPlaying = false;
-        session.setIsPlayingAndRequestBeatAtTime(false, now, currentBeat,
-                                                 quantum);
+
+    // 2. MIDI File Playback
+    if (playbackSeq.getNumEvents() > 0 && !pendingSyncStart) {
+      if (playbackCursor == 0)
+        lastProcessedBeat = -1.0; // Ensure first frame triggers
+      double playbackBeats = currentBeat - transportStartBeat;
+      double rangeEnd = playbackBeats;
+
+      juce::ScopedLock sl(midiLock);
+      while (playbackCursor < playbackSeq.getNumEvents()) {
+        auto *ev = playbackSeq.getEventPointer(playbackCursor);
+        double eventBeat = ev->message.getTimeStamp() / ticksPerQuarterNote;
+        if (eventBeat >= rangeEnd)
+          break;
+
+        if (eventBeat >= lastProcessedBeat) {
+          int rawCh = ev->message.getChannel();
+          int ch = mixer.getMappedChannel(rawCh);
+          int n = ev->message.getNoteNumber();
+
+          if (ev->message.isNoteOnOrOff()) {
+            n = juce::jlimit(0, 127, n + (pianoRollOctaveShift * 12));
+            auto mCopy = ev->message;
+            mCopy.setNoteNumber(n);
+
+            if (btnSplit.getToggleState() && ch == 1) {
+              if (n < 64)
+                ch = 2;
+            }
+
+            if (mixer.isChannelActive(ch)) {
+              sendSplitOscMessage(mCopy, ch);
+              if (midiOutput && !btnBlockMidiOut.getToggleState())
+                midiOutput->sendMessageNow(mCopy);
+            }
+          } else {
+            if (mixer.isChannelActive(ch)) {
+              sendSplitOscMessage(ev->message, ch);
+              if (midiOutput && !btnBlockMidiOut.getToggleState())
+                midiOutput->sendMessageNow(ev->message);
+            }
+          }
+        }
+        playbackCursor++;
+      }
+      lastProcessedBeat = rangeEnd;
+
+      if (playbackCursor >= playbackSeq.getNumEvents()) {
+        if (playlist.playMode == MidiPlaylist::LoopOne) {
+          playbackCursor = 0;
+          lastProcessedBeat = -1.0;
+          transportStartBeat = currentBeat;
+          logPanel.log("! Looping File", false);
+        } else if (playlist.playMode == MidiPlaylist::LoopAll) {
+          isPlaying = false;
+          juce::MessageManager::callAsync([this] { btnSkip.onClick(); });
+        } else {
+          stopPlayback();
+          logPanel.log("! Playback Finished", true);
+        }
       }
     }
+  } else {
+    // Visual playhead follows beatsPlayedOnPause when stopped/paused
+    trackGrid.playbackCursor =
+        (float)(beatsPlayedOnPause * ticksPerQuarterNote);
   }
-
-  // --- VISUAL UPDATES ---
-  {
-    double currentBeat = session.beatAtTime(now, quantum);
-    if (isPlaying) {
-      double playbackBeats = currentBeat - transportStartBeat;
-      trackGrid.playbackCursor =
-          (float)playbackBeats * (float)ticksPerQuarterNote;
-    } else {
-      trackGrid.playbackCursor =
-          (float)beatsPlayedOnPause * (float)ticksPerQuarterNote;
-    }
-    trackGrid.octaveShift = pianoRollOctaveShift;
-  }
-}
+} // End hiResTimerCallback
 
 void MainComponent::timerCallback() {
   if (!link)
@@ -1079,36 +1712,566 @@ void MainComponent::timerCallback() {
     logPanel.updateStats("Peers: " + juce::String(link->numPeers()));
   }
 
+  int currentPeers = (int)link->numPeers();
+  if (currentPeers != lastNumPeers) {
+    logPanel.log("! Link Peers: " + juce::String(currentPeers), true);
+    lastNumPeers = currentPeers;
+  }
+
   if (link && !link->isEnabled() && startupRetryActive) {
     linkRetryCounter++;
-    if (linkRetryCounter >= 125) {
+    if (linkRetryCounter >= 125)
       startupRetryActive = false;
-    } else {
+    else
       link->enable(true);
-    }
   }
   phaseVisualizer.setPhase(session.phaseAtTime(link->clock().micros(), quantum),
                            quantum);
 }
 
+// ==============================================================================
+// VISIBILITY & LAYOUT
+// ==============================================================================
+void MainComponent::updateVisibility() {
+  bool isDash = (currentView == AppView::Dashboard);
+  bool isSimple = isSimpleMode;
+  bool isOverlayActive = (currentView != AppView::Dashboard);
+
+  // Overlays
+  oscViewport.setVisible(currentView == AppView::OSC_Config);
+  helpViewport.setVisible(currentView == AppView::Help);
+  controlPage.setVisible(currentView == AppView::Control);
+
+  // Global Header Elements
+  btnDash.setVisible(true);
+  btnCtrl.setVisible(true);
+  btnOscCfg.setVisible(true);
+  btnHelp.setVisible(true);
+
+  // Panic Hidden in Simple Mode (Moved to specific location in resized?)
+  // User said: "In simple mode layout I want the "P" panic button placed very
+  // top right corner of app." So it is visible in both.
+  btnPanic.setVisible(true);
+
+  btnRetrigger.setVisible(isDash);
+  btnGPU.setVisible(currentView == AppView::Help);
+  btnMidiScaling.setVisible(currentView == AppView::Help);
+  btnMidiScalingToggle.setVisible(currentView == AppView::Help);
+
+  // User Request: "While in default layout and user clicks menu buttons
+  // Control/OSc Config/Help I need the midi i/o to hide and I need My IP: to
+  // hide also, also move the bpm slider to the very top left where My IP: was"
+
+  bool hideMidiAndIP = isOverlayActive;
+
+  // Network controls
+  // User: "I need My IP: to hide also"
+  bool showNet = isDash && !isSimple && !hideMidiAndIP;
+  grpNet.setVisible(showNet);
+  lblIp.setVisible(showNet);
+  edIp.setVisible(showNet);
+  lblPOut.setVisible(showNet);
+  edPOut.setVisible(showNet);
+  lblPIn.setVisible(showNet);
+  edPIn.setVisible(showNet);
+  btnConnect.setVisible(showNet);
+  ledConnect.setVisible(showNet);
+
+  // Dashboard - Shared
+  // User: "move the bpm slider to the very top left where My IP: was while in
+  // Control/OSc Config/Help menus" So BPM Slider is VISIBLE even in Overlay
+  // modes!
+  lblTempo.setVisible(isDash || isOverlayActive);
+  tempoSlider.setVisible(isDash || isOverlayActive);
+
+  // Other transport usually hidden if overlay active?
+  // Let's keep them hidden if that was original behavior, but usually overlays
+  // cover them. Original: btnResetBPM.setVisible(isDash);
+  btnResetBPM.setVisible(isDash);
+  btnLinkToggle.setVisible(isDash);
+  btnTapTempo.setVisible(isDash);
+  phaseVisualizer.setVisible(isDash);
+  lblLinkBeat.setVisible(false);
+  btnPlay.setVisible(isDash);
+  btnStop.setVisible(isDash);
+  btnPrev.setVisible(isDash);
+  btnSkip.setVisible(isDash);
+  btnClearPR.setVisible(isDash);
+  btnSplit.setVisible(isDash);
+
+  // Thru / Block moved
+  // User: "In default layout Midi i/o section move Thru to very top of app to
+  // the left of Panic." So Thru might be visible always? Or just Dash? "In
+  // default layout".
+  btnMidiThru.setVisible(isDash);
+  btnMidiClock.setVisible(false);
+
+  // MIDI I/O Group
+  // User: "I need the midi i/o to hide" (when in menus)
+  grpIo.setVisible(isDash && !isOverlayActive);
+
+  // Dashboard - Default Mode Only
+  bool isDefault = isDash && !isSimple && !isOverlayActive;
+
+  trackGrid.setVisible(isDefault);
+  horizontalKeyboard.setVisible(isDefault);
+  sequencer.setVisible(isDefault);
+  mixerViewport.setVisible(isDefault);
+  grpArp.setVisible(isDefault);
+  sliderPitchH.setVisible(isDefault);
+  sliderModH.setVisible(isDefault);
+  logPanel.setVisible(isDefault);
+  playlist.setVisible(isDefault);
+  btnPrOctUp.setVisible(isDefault);
+  btnPrOctDown.setVisible(isDefault);
+
+  // Arp Gen Internals
+  btnArp.setVisible(isDefault);
+  btnArpSync.setVisible(isDefault);
+
+  // Block Out: "next in default view to the right of midi out port place the
+  // Block Out button" But also in Simple Mode: "In its place (Panic top right)
+  // you can put the Block Out button" So Visible in both Dash modes.
+  btnBlockMidiOut.setVisible(isDash);
+
+  sliderArpSpeed.setVisible(isDefault);
+  sliderArpVel.setVisible(isDefault);
+  cmbArpPattern.setVisible(isDefault);
+  lblArpVel.setVisible(isDefault);
+  lblArpBpm.setVisible(isDefault);
+
+  // Dashboard - Simple Mode Only
+  bool isSimpleDash = isDash && isSimple && !isOverlayActive;
+  verticalKeyboard.setVisible(isSimpleDash);
+  sliderPitchV.setVisible(isSimpleDash);
+  sliderModV.setVisible(isSimpleDash);
+  vol1Simple.setVisible(isSimpleDash);
+  vol2Simple.setVisible(isSimpleDash);
+  btnVol1CC.setVisible(isSimpleDash);
+  btnVol2CC.setVisible(isSimpleDash);
+  txtVol1Osc.setVisible(isSimpleDash);
+  txtVol2Osc.setVisible(isSimpleDash);
+  // Log and Playlist also in Simple but different spots
+  if (isSimpleDash) {
+    logPanel.setVisible(true);
+    playlist.setVisible(true);
+  }
+}
+
+void MainComponent::resized() {
+  logoView.setBounds(10, 5, 25, 25);
+  lblLocalIpHeader.setBounds(45, 5, 50, 25);
+  lblLocalIpDisplay.setBounds(100, 5, 120, 25);
+
+  auto area = getLocalBounds().reduced(5);
+
+  // --- 1. GLOBAL HEADER ---
+  auto headerRow = area.removeFromTop(35);
+  int btnW = 90;
+  int navX = (getWidth() - (4 * btnW)) / 2;
+  auto navArea = headerRow.withX(navX).withWidth(4 * btnW);
+  btnDash.setBounds(navArea.removeFromLeft(btnW).reduced(2));
+  btnCtrl.setBounds(navArea.removeFromLeft(btnW).reduced(2));
+  btnOscCfg.setBounds(navArea.removeFromLeft(btnW).reduced(2));
+  btnHelp.setBounds(navArea.removeFromLeft(btnW).reduced(2));
+
+  // --- TOP RIGHT ACTIONS ---
+  // Default Layout: "move Thru to very top of app to the left of Panic."
+  // Note: Panic is "Left of Panic" -> Thru, Panic.
+
+  if (!isSimpleMode && currentView == AppView::Dashboard) {
+    btnPanic.setBounds(headerRow.removeFromRight(85).reduced(2));
+    btnMidiThru.setBounds(headerRow.removeFromRight(50).reduced(2));
+  } else {
+    // Simple Mode: Panic is top right corner
+    // Or Help menu: Panic preserved
+    btnPanic.setBounds(headerRow.removeFromRight(85).reduced(2));
+  }
+  btnPanic.setButtonText("Panic");
+  btnGPU.setBounds(headerRow.removeFromRight(50).reduced(2));
+
+  // Retrigger
+  if (currentView == AppView::Dashboard) {
+    btnRetrigger.setBounds(headerRow.removeFromRight(60).reduced(2));
+  }
+
+  // --- OVERLAY HANDLING WITH SPECIAL BPM PLACEMENT ---
+  if (currentView != AppView::Dashboard) {
+    auto overlayRect = getLocalBounds().reduced(40).withY(50);
+
+    // "move the bpm slider to the very top left where My IP: was while in
+    // Control/OSc Config/Help menus" IP was at (100, 5, 120, 25). Let's place
+    // it roughly there or slightly below header if needed. Actually headerRow
+    // was removeFromTop. The IP Labels are hidden in updateVisibility.
+    tempoSlider.setBounds(60, 5, 140, 25);
+    // Just force it there.
+
+    if (currentView == AppView::OSC_Config)
+      oscViewport.setBounds(overlayRect);
+    else if (currentView == AppView::Help) {
+      helpViewport.setBounds(overlayRect);
+      // Move scaling to top left of Help area to avoid blocking text
+      btnMidiScaling.setBounds(overlayRect.getX() + 10, overlayRect.getY() + 10,
+                               120, 25);
+      btnMidiScalingToggle.setBounds(overlayRect.getX() + 140,
+                                     overlayRect.getY() + 10, 150, 25);
+    } else
+      controlPage.setBounds(overlayRect);
+    return;
+  }
+
+  // --- 3. SIMPLE MODE LAYOUT ---
+  if (isSimpleMode) {
+    auto r = area;
+    lblLocalIpHeader.setVisible(false);
+    lblLocalIpDisplay.setVisible(false);
+
+    // --- TOP: MIDI I/O Strip ---
+    auto midiArea = r.removeFromTop(65).reduced(2);
+    grpIo.setBounds(midiArea);
+    auto rMidi = grpIo.getBounds().reduced(10, 20);
+    lblIn.setBounds(rMidi.removeFromLeft(20));
+    cmbMidiIn.setBounds(rMidi.removeFromLeft(90));
+    lblCh.setBounds(rMidi.removeFromLeft(20));
+    cmbMidiCh.setBounds(rMidi.removeFromLeft(50));
+    lblOut.setBounds(rMidi.removeFromLeft(20));
+    cmbMidiOut.setBounds(rMidi.removeFromLeft(90));
+
+    btnSplit.setBounds(rMidi.removeFromLeft(45).reduced(2));
+    btnMidiThru.setBounds(rMidi.removeFromLeft(45).reduced(2));
+
+    // "In its place (Panic's old place) you can put the Block Out button" (Old
+    // Panic was top right... Wait) "In simple mode layout I want the "P" panic
+    // button placed very top right corner of app." "In its place you can put
+    // the Block Out button ."
+    // --> This might mean "Where Panic was in the I/O strip or Header?"
+    // Panic was in Header. Block Out is usually in I/O.
+    // Let's assume user wants Block Out in the Header where Panic used to be?
+    // "Thru to very top of app to the left of Panic." (Default)
+
+    // Re-reading: "In simple mode layout I want the "P" panic button placed
+    // very top right corner of app. In its place you can put the Block Out
+    // button" Usually Panic IS top right. Maybe they mean in Simple Mode the
+    // Panic was moved?? In logic above, I put Panic top right. So Block Out
+    // should go where? Maybe they mean "In the simple mode I/O strip where
+    // Panic WAS?" (Panic wasn't in I/O strip in previous code). Let's put Block
+    // Out in the I/O strip for now, similar to Default. OR: "Next in simple
+    // mode layout ... move the 2 sliders ... buttons to be above the bpm slide"
+
+    btnRetrigger.setBounds(rMidi.removeFromLeft(45).reduced(2));
+
+    // Simple Mode: Block Out is typically near I/O
+    if (!btnPanic.isVisible()) // Should be visible
+      btnBlockMidiOut.setBounds(
+          headerRow.removeFromRight(80).reduced(2)); // Try Header?
+    else
+      btnBlockMidiOut.setBounds(rMidi.removeFromLeft(45).reduced(2));
+
+    btnMidiClock.setVisible(false);
+
+    // --- BOTTOM TRANSPORT ---
+    auto transportArea = area.removeFromBottom(50).reduced(10, 5);
+
+    // "Simple mode layout ... move the Clear button over to the left next to
+    // the > button, in its place we will move/put the tap tempo button."
+    // "Reduce width of piano roll to make room for playback control along the
+    // very bottom." "Move bpm slider to veryright side and dont have it too
+    // wide."
+
+    // Left: Clear, Play, Stop, Prev, Skip
+    btnClearPR.setBounds(transportArea.removeFromLeft(50).reduced(2));
+    btnPlay.setBounds(transportArea.removeFromLeft(50).reduced(2));
+    btnStop.setBounds(transportArea.removeFromLeft(50).reduced(2));
+    btnPrev.setBounds(transportArea.removeFromLeft(40).reduced(2));
+    btnSkip.setBounds(transportArea.removeFromLeft(40).reduced(2));
+
+    // Right: BPM Slider (Narrow), Tap Tempo (in old Clear spot -> Rightish?)
+    // "move/put the tap tempo button" (in Clear's old place? Clear was usually
+    // right side?) Layout: [Clear] [Play] [Stop] ...         [Tap] [BPM]
+
+    auto bpmRegion = transportArea.removeFromRight(150);
+    tempoSlider.setBounds(bpmRegion.removeFromRight(80).reduced(2)); // Narrower
+    btnTapTempo.setBounds(bpmRegion.removeFromRight(60).reduced(2));
+    btnResetBPM.setBounds(transportArea.removeFromRight(60).reduced(2));
+
+    // --- LEFT COLUMN: VERTICAL KEYBOARD ---
+    auto leftCol = r.removeFromLeft(35); // Narrower
+    verticalKeyboard.setBounds(
+        leftCol.withHeight(juce::jmin(leftCol.getHeight(), 350))); // Shorter
+
+    // --- RIGHT COLUMN: LINK / PHASE / SLIDERS ---
+    auto rightPan = area.removeFromRight(140).reduced(5);
+    rightPan.removeFromTop(80);
+
+    // "Simple mode layout move the 2 sliders and its cc buttons to be above the
+    // bpm slide on the bottom right, make the sliders a little taller aswell."
+    // We need to push them to Bottom of RightPan?
+
+    auto rightBottom = rightPan.removeFromBottom(250); // Space for sliders
+
+    // Sliders
+    // "make the sliders a little taller aswell"
+    // 2 Sliders.
+    auto sl1 = rightBottom.removeFromBottom(100);
+    btnVol2CC.setBounds(sl1.removeFromBottom(20).reduced(2));
+    txtVol2Osc.setBounds(sl1.removeFromBottom(20).reduced(5, 0));
+    vol2Simple.setBounds(sl1.reduced(25, 0)); // Taller
+
+    auto sl2 = rightBottom.removeFromBottom(100);
+    btnVol1CC.setBounds(sl2.removeFromBottom(20).reduced(2));
+    txtVol1Osc.setBounds(sl2.removeFromBottom(20).reduced(5, 0));
+    vol1Simple.setBounds(sl2.reduced(25, 0)); // Taller
+
+    phaseVisualizer.setBounds(rightPan.removeFromTop(20));
+    phaseVisualizer.setVisible(true);
+
+    // --- CENTER: LOG & PLAYLIST (Reduced Width/Height) ---
+    // User: "Keep log/play list tight to left beside the piano roll"
+    // In Simple Mode, Vertical Keyboard is at 'leftCol' (35px width).
+    // We want Log/Playlist immediately to the right of that.
+
+    // We reduced 'r' by 35 (Left) and 140 (Right).
+    // So 'r' is the center region.
+    // 'r.getX()' should be approx 40.
+
+    auto centerArea = r;
+    // User: "Keep log/play list tight to left beside the piano roll"
+    // "Reduced in width and height"
+    auto tightLeft = centerArea.removeFromLeft(180); // Even narrower
+
+    logPanel.setBounds(tightLeft.removeFromTop(120).reduced(2));
+    playlist.setBounds(tightLeft.removeFromTop(150).reduced(2));
+
+    return;
+  }
+
+  lblLocalIpHeader.setVisible(true);
+  lblLocalIpDisplay.setVisible(true);
+
+  // --- 4. DEFAULT (DASHBOARD) MODE LAYOUT ---
+  auto r = area;
+
+  // Header Items Row
+  auto configRow = r.removeFromTop(65);
+
+  // "also make the connect/disconnect button a touch wider"
+  // Needs to steal space from others.
+
+  grpNet.setBounds(configRow.removeFromLeft(400).reduced(2)); // Widen Group
+  lblLocalIpHeader.setVisible(!isSimpleMode);
+  lblLocalIpDisplay.setVisible(!isSimpleMode);
+  auto rNet = grpNet.getBounds().reduced(5, 15);
+  lblIp.setBounds(rNet.removeFromLeft(20));
+  edIp.setBounds(rNet.removeFromLeft(85));
+  lblPOut.setBounds(rNet.removeFromLeft(35));
+  edPOut.setBounds(rNet.removeFromLeft(50));
+  lblPIn.setBounds(rNet.removeFromLeft(25));
+  edPIn.setBounds(rNet.removeFromLeft(50));
+
+  btnConnect.setBounds(rNet.removeFromLeft(90).reduced(2)); // Wider (was 70)
+  ledConnect.setBounds(rNet.removeFromLeft(30).reduced(5));
+
+  grpIo.setBounds(configRow.reduced(2));
+  auto rMidi = grpIo.getBounds().reduced(5, 15);
+  lblIn.setBounds(rMidi.removeFromLeft(20));
+  cmbMidiIn.setBounds(rMidi.removeFromLeft(100));
+  lblCh.setBounds(rMidi.removeFromLeft(20));
+  cmbMidiCh.setBounds(rMidi.removeFromLeft(50));
+  lblOut.setBounds(rMidi.removeFromLeft(20));
+  cmbMidiOut.setBounds(rMidi.removeFromLeft(100));
+
+  // "next in default view to the right of midi out port place the Block Out ...
+  // button"
+  btnBlockMidiOut.setBounds(rMidi.removeFromLeft(80).reduced(2));
+
+  // Note: Thru moved to Header (Left of Panic)
+  // btnMidiThru.setBounds(rMidi.removeFromLeft(50).reduced(2));
+
+  btnMidiClock.setVisible(false);
+
+  // Transport Row
+  auto transRow = r.removeFromTop(45).reduced(2);
+  btnPlay.setBounds(transRow.removeFromLeft(45).reduced(2));
+  btnStop.setBounds(transRow.removeFromLeft(45).reduced(2));
+  btnPrev.setBounds(transRow.removeFromLeft(35).reduced(2));
+  btnSkip.setBounds(transRow.removeFromLeft(35).reduced(2));
+  btnClearPR.setBounds(transRow.removeFromLeft(55).reduced(2));
+
+  // "slightly move the bpm slider to the left and widen it"
+  lblTempo.setBounds(transRow.removeFromLeft(40));
+  tempoSlider.setBounds(
+      transRow.removeFromLeft(130).reduced(0, 5)); // Wider (was 110)
+  btnResetBPM.setBounds(transRow.removeFromLeft(70).reduced(2));
+
+  // "move the Link button to the right of the visual beat step indicator"
+  phaseVisualizer.setVisible(true);
+  phaseVisualizer.setBounds(transRow.removeFromLeft(120).reduced(2));
+  btnLinkToggle.setVisible(true);
+  btnLinkToggle.setBounds(
+      transRow.removeFromLeft(60).reduced(2)); // Right of Phase
+
+  // Buttons shifted right
+  btnSplit.setBounds(transRow.removeFromRight(55).reduced(2));
+  btnPrOctUp.setBounds(transRow.removeFromRight(45).reduced(2));
+  btnPrOctDown.setBounds(transRow.removeFromRight(45).reduced(2));
+
+  // Footer
+  auto footer = r.removeFromBottom(140);
+  auto linkArea = footer.removeFromRight(280).reduced(2);
+  auto linkTop = linkArea.removeFromTop(30);
+  cmbQuantum.setBounds(linkTop.removeFromLeft(100).reduced(2));
+  btnPreventBpmOverride.setBounds(linkTop.removeFromLeft(80).reduced(2));
+  nudgeSlider.setBounds(linkArea.removeFromTop(25));
+  btnTapTempo.setBounds(linkArea.removeFromBottom(40).reduced(5));
+
+  mixerViewport.setBounds(footer);
+  mixer.setSize(16 * mixer.stripWidth, mixerViewport.getHeight() - 20);
+
+  // Right Side
+  auto rightSide = r.removeFromRight(260).reduced(2);
+  logPanel.setBounds(rightSide.removeFromTop(200));
+
+  // Arp Gen Controls
+  auto ar = grpArp.getBounds().reduced(10, 15);
+  auto leftCol = ar.removeFromLeft(65);
+  btnArp.setBounds(leftCol.removeFromTop(20).reduced(1));
+  btnArpSync.setBounds(leftCol.removeFromTop(20).reduced(1));
+  // Block Out moved to MIDI strip
+  // btnBlockMidiOut.setBounds(leftCol.removeFromTop(20).reduced(1));
+
+  auto dialW = 55;
+  auto dialS = ar.removeFromLeft(dialW);
+  sliderArpSpeed.setBounds(dialS.removeFromTop(45));
+  lblArpSpdLabel.setBounds(dialS.removeFromTop(15));
+
+  auto dialV = ar.removeFromLeft(dialW);
+  sliderArpVel.setBounds(dialV.removeFromTop(45));
+  lblArpVelLabel.setBounds(dialV.removeFromTop(15));
+
+  // Shorten Pattern menu
+  cmbArpPattern.setBounds(ar.removeFromTop(35).reduced(2, 5));
+
+  playlist.setBounds(rightSide.reduced(0, 5));
+
+  // Center Area (Timeline -> Grid -> KB -> Seq)
+  auto center = r.reduced(2);
+  sequencer.setBounds(center.removeFromBottom(120));
+
+  // Pitch/Mod aligned with Keyboard
+  auto kbArea = center.removeFromBottom(80);
+  auto wheelsL = kbArea.removeFromLeft(50);
+  sliderPitchH.setBounds(wheelsL.removeFromLeft(22).reduced(2, 5));
+  sliderModH.setBounds(wheelsL.removeFromLeft(22).reduced(2, 5));
+  horizontalKeyboard.setBounds(kbArea);
+
+  wheelFutureBox.setBounds(wheelsL.getX(), center.getY(), 44,
+                           center.getHeight() - 80);
+
+  trackGrid.setBounds(center);
+}
+
+void MainComponent::handleIncomingMidiMessage(juce::MidiInput *,
+                                              const juce::MidiMessage &m) {
+  // 1. Pass Notes to Keyboard State for Visuals
+  if (m.isNoteOnOrOff()) {
+    isHandlingOsc = true; // Use flag to prevent handleNoteOn from echoing back
+                          // to the same hardware
+    keyboardState.processNextMidiEvent(m);
+    isHandlingOsc = false;
+
+    // FIX: Send to OSC specifically for incoming MIDI
+    sendSplitOscMessage(m);
+
+    // If Thru is enabled, and we aren't in a loopback scenario:
+    if (midiOutput && btnMidiThru.getToggleState() &&
+        !btnBlockMidiOut.getToggleState()) {
+      // Only thru if the output isn't explicitly blocked
+      midiOutput->sendMessageNow(m);
+    }
+    return;
+  }
+
+  // MIDI Clock Forwarding (Standard Thru) & Sync In
+  if (m.isMidiClock()) {
+    // 1. Thru
+    if (midiOutput && btnMidiThru.getToggleState() &&
+        !btnBlockMidiOut.getToggleState()) {
+      midiOutput->sendMessageNow(m);
+    } else if (!btnMidiThru.getToggleState()) {
+      return;
+    }
+
+    // 2. Sync to In (BPM track)
+    double nowMs = juce::Time::getMillisecondCounterHiRes();
+    clockInTimes.push_back(nowMs);
+    clockPulseCounter++;
+
+    if (clockPulseCounter >= 24) { // Every Quarter Note
+      if (clockInTimes.size() >= 24) {
+        double first = clockInTimes.front();
+        double last = clockInTimes.back();
+        double duration = last - first;
+        if (duration > 50.0) {
+          double bpm = 60000.0 / duration;
+          bpm = juce::jlimit(20.0, 444.0, bpm);
+          midiInBpm = bpm;
+
+          // Apply to Link if link is on
+          if (link && link->isEnabled()) {
+            auto state = link->captureAppSessionState();
+            state.setTempo(bpm, link->clock().micros());
+            link->commitAppSessionState(state);
+          }
+
+          // Update internal slider if not playing/sync started
+          if (!isPlaying && !pendingSyncStart) {
+            juce::MessageManager::callAsync([this, bpm] {
+              tempoSlider.setValue(bpm, juce::dontSendNotification);
+            });
+          }
+        }
+      }
+      clockInTimes.clear();
+      clockPulseCounter = 0;
+    }
+    return;
+  }
+
+  if (m.isMidiStart() || m.isMidiContinue() || m.isMidiStop()) {
+    if (midiOutput && btnMidiThru.getToggleState()) {
+      midiOutput->sendMessageNow(m);
+    }
+    return;
+  }
+
+  // 2. Pass other messages (CC, Pitch, etc.) directly to OSC and Thru
+  juce::MessageManager::callAsync([this, m] {
+    if (!isHandlingOsc) {
+      sendSplitOscMessage(m);
+    }
+    if (midiOutput && !btnBlockMidiOut.getToggleState() &&
+        btnMidiThru.getToggleState()) {
+      midiOutput->sendMessageNow(m);
+    }
+  });
+}
+
 void MainComponent::loadMidiFile(juce::File f) {
   mixer.removeAllStrips();
-
   if (f.isDirectory()) {
     auto files = f.findChildFiles(juce::File::findFiles, false, "*.mid");
     for (auto &file : files)
       playlist.addFile(file.getFullPathName());
+    logPanel.log("! Loaded Folder: " + f.getFileName(), true);
     return;
   }
   if (!f.existsAsFile())
     return;
   stopPlayback();
-
   juce::ScopedLock sl(midiLock);
   juce::FileInputStream stream(f);
   if (!stream.openedOk())
     return;
-
   juce::MidiFile mf;
   if (mf.readFrom(stream)) {
     ticksPerQuarterNote = (double)mf.getTimeFormat();
@@ -1119,7 +2282,6 @@ void MainComponent::loadMidiFile(juce::File f) {
       playbackSeq.addSequence(*mf.getTrack(i), 0);
       if (i < 16)
         mixer.strips[i]->setTrackName("Track " + juce::String(i + 1));
-
       for (auto *ev : *mf.getTrack(i))
         if (ev->message.isTempoMetaEvent() && !bpmFound) {
           currentFileBpm = 60.0 / ev->message.getTempoSecondsPerQuarterNote();
@@ -1138,15 +2300,18 @@ void MainComponent::loadMidiFile(juce::File f) {
     }
     playbackSeq.updateMatchedPairs();
     sequenceLength = playbackSeq.getEndTime();
+    playbackCursor = 0; // Reset on load
+    lastProcessedBeat = -1.0;
     trackGrid.loadSequence(playbackSeq);
     trackGrid.setTicksPerQuarter(ticksPerQuarterNote);
-    logPanel.log("Loaded: " + f.getFileName(), true);
+    logPanel.log("! Loaded File: " + f.getFileName(), true);
+    playlist.addFile(f.getFullPathName());
     grabKeyboardFocus();
   }
 }
 
 void MainComponent::sendPanic() {
-  logPanel.log("!!! PANIC !!!", true);
+  logPanel.log("! PANIC", true);
   for (int ch = 1; ch <= 16; ++ch) {
     juce::String channelName = mixer.getChannelName(ch);
     for (int note = 0; note < 128; ++note) {
@@ -1177,311 +2342,6 @@ void MainComponent::setView(AppView v) {
   resized();
   grabKeyboardFocus();
 }
-
-void MainComponent::updateVisibility() {
-  bool isDash = (currentView == AppView::Dashboard);
-  bool isSimple = isSimpleMode;
-
-  // -- MAIN OVERLAYS --
-  oscViewport.setVisible(currentView == AppView::OSC_Config);
-  helpViewport.setVisible(currentView == AppView::Help);
-  controlPage.setVisible(currentView == AppView::Control);
-
-  // -- DASHBOARD ONLY --
-  playlist.setVisible(isDash);
-  logPanel.setVisible(isDash);
-  cmbQuantum.setVisible(isDash);
-  btnLinkToggle.setVisible(isDash);
-  btnPreventBpmOverride.setVisible(isDash);
-  btnTapTempo.setVisible(isDash);
-  btnPrOctUp.setVisible(isDash);
-  btnPrOctDown.setVisible(isDash);
-  btnSplit.setVisible(isDash);
-  nudgeSlider.setVisible(isDash);
-
-  // -- MODE SPECIFIC (DASHBOARD) --
-  verticalKeyboard.setVisible(isDash && isSimple);
-  horizontalKeyboard.setVisible(isDash && !isSimple);
-  trackGrid.setVisible(isDash && !isSimple);
-  mixerViewport.setVisible(isDash && !isSimple);
-  sequencer.setVisible(isDash && !isSimple);
-  grpArp.setVisible(isDash && !isSimple);
-  cmbArpPattern.setVisible(isDash && !isSimple);
-  lblArpBpm.setVisible(isDash && !isSimple);
-  lblArpVel.setVisible(isDash && !isSimple);
-  sliderArpSpeed.setVisible(isDash && !isSimple);
-  sliderArpVel.setVisible(isDash && !isSimple);
-  btnArp.setVisible(isDash && !isSimple);
-  btnArpSync.setVisible(isDash && !isSimple);
-  btnBlockMidiOut.setVisible(isDash && !isSimple);
-  phaseVisualizer.setVisible(isDash && !isSimple);
-  lblLatency.setVisible(isDash && !isSimple);
-
-  sliderPitchH.setVisible(isDash);
-  sliderModH.setVisible(isDash);
-  sliderPitchV.setVisible(false);
-  sliderModV.setVisible(false);
-
-  // Simple Mode Controls
-  vol1Simple.setVisible(isDash && isSimple);
-  vol2Simple.setVisible(isDash && isSimple);
-  txtVol1Osc.setVisible(isDash && isSimple);
-  txtVol2Osc.setVisible(isDash && isSimple);
-  btnVol1CC.setVisible(isDash && isSimple);
-  btnVol2CC.setVisible(isDash && isSimple);
-
-  btnPlay.setVisible(isDash);
-  btnStop.setVisible(isDash);
-  btnPrev.setVisible(isDash);
-  btnSkip.setVisible(isDash);
-  btnClearPR.setVisible(isDash);
-  btnResetBPM.setVisible(isDash);
-
-  grpNet.setVisible(isDash && !isSimple);
-  grpIo.setVisible(isDash);
-  btnPanic.setVisible(isDash);
-  btnRetrigger.setVisible(isDash);
-}
-
-void MainComponent::resized() {
-  logoView.setBounds(10, 5, 25, 25);
-  lblLocalIpHeader.setBounds(45, 5, 50, 25);
-  lblLocalIpDisplay.setBounds(95, 5, 150, 25);
-
-  auto area = getLocalBounds().reduced(5);
-  auto menu = area.removeFromTop(30);
-
-  // Center Menu Logic
-  int bw = 100;
-  int startX = (menu.getWidth() - 4 * bw) / 2;
-  auto centerMenu = menu.withX(startX).withWidth(4 * bw);
-  btnDash.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
-  btnCtrl.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
-  btnOscCfg.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
-  btnHelp.setBounds(centerMenu.removeFromLeft(bw).reduced(2));
-
-  if (isSimpleMode) {
-    btnPanic.setButtonText("P");
-    btnPanic.setBounds(menu.removeFromRight(30).reduced(2));
-  } else {
-    btnPanic.setButtonText("PANIC");
-  }
-
-  // Viewport Handling
-  if (currentView != AppView::Dashboard) {
-    if (currentView == AppView::OSC_Config)
-      oscViewport.setBounds(getLocalBounds().reduced(20).withY(50));
-    else if (currentView == AppView::Help)
-      helpViewport.setBounds(getLocalBounds().reduced(20).withY(50));
-    else
-      controlPage.setBounds(getLocalBounds().reduced(20).withY(50));
-    return;
-  }
-
-  lblLocalIpHeader.setVisible(currentView == AppView::Dashboard &&
-                              !isSimpleMode);
-  lblLocalIpDisplay.setVisible(currentView == AppView::Dashboard &&
-                               !isSimpleMode);
-
-  if (isSimpleMode) {
-    // --- SIMPLE MODE LAYOUT (Matches Screenshot 2026-01-17 052615.png) ---
-    auto r = area;
-
-    // 1. Header (MIDI I/O)
-    auto headerRow = r.removeFromTop(55).reduced(2);
-    grpIo.setBounds(headerRow);
-    grpIo.setText("MIDI I/O");
-    auto rMidi = grpIo.getBounds().reduced(5, 15);
-    lblIn.setBounds(rMidi.removeFromLeft(20));
-    cmbMidiIn.setBounds(rMidi.removeFromLeft(120).reduced(0, 2));
-    rMidi.removeFromLeft(10);
-    lblOut.setBounds(rMidi.removeFromLeft(25));
-    cmbMidiOut.setBounds(rMidi.removeFromLeft(120).reduced(0, 2));
-    btnRetrigger.setBounds(rMidi.removeFromRight(60).reduced(2));
-
-    // 2. Footer (Transport Row)
-    auto footerRow = r.removeFromBottom(40);
-    int btnW = footerRow.getWidth() / 7;
-    // Play | Stop | < | > | Reset(?) | Clear | Reset BPM
-    btnPlay.setBounds(footerRow.removeFromLeft(btnW).reduced(2));
-    btnStop.setBounds(footerRow.removeFromLeft(btnW).reduced(2));
-    btnPrev.setBounds(footerRow.removeFromLeft(btnW).reduced(2));
-    btnSkip.setBounds(footerRow.removeFromLeft(btnW).reduced(2));
-
-    // We need a placeholder for 'Reset' if it's not btnSplit.
-    // Using empty space or btnSplit for now if user insisted on not
-    // re-purposing badly. The screenshot has "Reset". I'll skip it to avoid
-    // "fucking" logic if variable missing.
-    footerRow.removeFromLeft(btnW);
-
-    btnClearPR.setBounds(footerRow.removeFromLeft(btnW).reduced(2));
-    btnResetBPM.setBounds(footerRow.reduced(2));
-
-    // 3. BPM Row (Just above Footer)
-    auto bpmRow = r.removeFromBottom(30);
-    bpmRow.removeFromLeft(bpmRow.getWidth() - 200); // Align Right
-    lblTempo.setBounds(bpmRow.removeFromLeft(40));
-    tempoSlider.setBounds(bpmRow.removeFromLeft(100));
-    // phaseVisualizer in this row? No, in right column.
-
-    // 4. Center Content
-    auto mainArea = r;
-    verticalKeyboard.setBounds(mainArea.removeFromLeft(50));
-
-    auto rightCol = mainArea.removeFromRight(150).reduced(5);
-    // Link / Phase / Tap / Oct / Faders
-
-    auto linkRow = rightCol.removeFromTop(25);
-    cmbQuantum.setBounds(linkRow.removeFromLeft(90)); // "4 Beats (Bar)"
-
-    auto linkRow2 = rightCol.removeFromTop(25);
-    btnLinkToggle.setBounds(linkRow2.removeFromLeft(50)); // "Link"
-    nudgeSlider.setBounds(linkRow2);
-
-    phaseVisualizer.setBounds(rightCol.removeFromTop(30).reduced(0, 5));
-    btnTapTempo.setBounds(rightCol.removeFromTop(30).reduced(10, 2));
-
-    auto octRow = rightCol.removeFromTop(30);
-    btnPrOctDown.setBounds(octRow.removeFromLeft(70).reduced(2));
-    btnPrOctUp.setBounds(octRow.reduced(2));
-
-    // Faders (Vol1 / Vol2)
-    auto faderArea = rightCol;
-    int faderW = faderArea.getWidth() / 2;
-    auto f1 = faderArea.removeFromLeft(faderW).reduced(2);
-    auto f2 = faderArea.reduced(2);
-
-    vol1Simple.setBounds(f1.removeFromTop(f1.getHeight() - 50));
-    txtVol1Osc.setBounds(f1.removeFromTop(20));
-    btnVol1CC.setBounds(f1);
-
-    vol2Simple.setBounds(f2.removeFromTop(f2.getHeight() - 50));
-    txtVol2Osc.setBounds(f2.removeFromTop(20));
-    btnVol2CC.setBounds(f2);
-
-    // Center Log/Playlist
-    logPanel.setBounds(mainArea.removeFromTop(150));
-    playlist.setBounds(mainArea);
-
-  } else {
-    // --- DEFAULT LAYOUT (Matches Screenshot 2026-01-17 050320.png) ---
-    auto topStrip = area.removeFromTop(80);
-
-    // Network Group
-    grpNet.setBounds(topStrip.removeFromLeft(400).reduced(2));
-    auto rNet = grpNet.getBounds().reduced(5, 15);
-    lblIp.setBounds(rNet.removeFromLeft(25));
-    edIp.setBounds(rNet.removeFromLeft(80));
-    lblPOut.setBounds(rNet.removeFromLeft(40));
-    edPOut.setBounds(rNet.removeFromLeft(50));
-    lblPIn.setBounds(rNet.removeFromLeft(30));
-    edPIn.setBounds(rNet.removeFromLeft(50));
-    ledConnect.setBounds(rNet.removeFromRight(24));
-    btnConnect.setBounds(rNet);
-
-    // MIDI Group
-    grpIo.setBounds(topStrip.reduced(2));
-    auto rMidi = grpIo.getBounds().reduced(5, 15);
-    lblIn.setBounds(rMidi.removeFromLeft(20));
-    cmbMidiIn.setBounds(rMidi.removeFromLeft(80));
-    lblCh.setBounds(rMidi.removeFromLeft(25));
-    cmbMidiCh.setBounds(rMidi.removeFromLeft(60));
-    lblOut.setBounds(rMidi.removeFromLeft(30));
-    cmbMidiOut.setBounds(rMidi.removeFromLeft(90));
-
-    // Control Row
-    auto ctrlRow = area.removeFromTop(40).reduced(2);
-    btnPlay.setBounds(ctrlRow.removeFromLeft(50).reduced(2));
-    btnStop.setBounds(ctrlRow.removeFromLeft(50).reduced(2));
-    btnPrev.setBounds(ctrlRow.removeFromLeft(40).reduced(2));
-    btnSkip.setBounds(ctrlRow.removeFromLeft(40).reduced(2));
-    btnClearPR.setBounds(ctrlRow.removeFromLeft(60).reduced(2));
-
-    // BPM Section
-    lblTempo.setBounds(ctrlRow.removeFromLeft(40));
-    tempoSlider.setBounds(ctrlRow.removeFromLeft(100).reduced(2));
-    phaseVisualizer.setBounds(
-        ctrlRow.removeFromLeft(100).reduced(5)); // Visualizer in middle?
-
-    btnResetBPM.setBounds(ctrlRow.removeFromLeft(80).reduced(2));
-    btnSplit.setBounds(ctrlRow.removeFromLeft(60).reduced(2));
-    btnPrOctDown.setBounds(ctrlRow.removeFromLeft(50).reduced(2));
-    btnPrOctUp.setBounds(ctrlRow.removeFromLeft(50).reduced(2));
-
-    // Bottom Area Construction
-    auto bottomSection = area.removeFromBottom(180);
-
-    // Sequencer & Arp (Row above Mixer)
-    auto seqArpRow = bottomSection.removeFromTop(100);
-    sequencer.setBounds(seqArpRow.removeFromLeft(500)); // Sequencer wide left
-    grpArp.setBounds(seqArpRow);                        // Arp right
-
-    // Arp Internal Layout
-    auto rA = grpArp.getBounds().reduced(5, 15);
-    auto checks = rA.removeFromLeft(60);
-    btnArp.setBounds(checks.removeFromTop(20));
-    btnArpSync.setBounds(checks.removeFromTop(20));
-    btnBlockMidiOut.setBounds(checks.removeFromTop(20));
-
-    sliderArpSpeed.setBounds(rA.removeFromLeft(60).reduced(0, 10));
-    sliderArpVel.setBounds(rA.removeFromLeft(60).reduced(0, 10));
-    cmbArpPattern.setBounds(rA.reduced(5, 20));
-
-    // Mixer & Link (Bottom Row)
-    auto mixerRow = bottomSection;
-    auto linkControls = mixerRow.removeFromRight(250); // Right side
-    mixerViewport.setBounds(mixerRow); // Remaining left is mixer
-    mixer.setSize(16 * mixer.stripWidth, mixerRow.getHeight() - 20);
-
-    // Link Controls Area
-    auto rLink = linkControls.reduced(5);
-    auto lRow1 = rLink.removeFromTop(30);
-    cmbQuantum.setBounds(lRow1.removeFromLeft(100));
-    btnPreventBpmOverride.setBounds(lRow1.removeFromLeft(20)); // Checkbox
-    btnLinkToggle.setBounds(lRow1);                            // "Link"
-
-    auto lRow2 = rLink.removeFromTop(30);
-    lblLatency.setBounds(lRow2.removeFromLeft(50));
-    nudgeSlider.setBounds(lRow2);
-
-    btnTapTempo.setBounds(rLink.removeFromTop(30).reduced(10, 0));
-
-    // Main Middle: Piano Roll
-    auto keyArea = area.removeFromBottom(60);
-    sliderPitchH.setBounds(keyArea.removeFromLeft(30));
-    sliderModH.setBounds(keyArea.removeFromLeft(30));
-    horizontalKeyboard.setBounds(keyArea);
-
-    trackGrid.setBounds(area);
-  }
-}
-
-void MainComponent::handleIncomingMidiMessage(juce::MidiInput *,
-                                              const juce::MidiMessage &m) {
-  juce::MessageManager::callAsync([this, m] {
-    if (m.isNoteOnOrOff())
-      keyboardState.processNextMidiEvent(m);
-    else
-      sendSplitOscMessage(m);
-  });
-}
-void MainComponent::toggleChannel(int ch, bool active) {
-  if (active)
-    activeChannels.insert(ch);
-  else
-    activeChannels.erase(ch);
-}
-int MainComponent::getSelectedChannel() const {
-  return activeChannels.empty() ? 1 : *activeChannels.begin();
-}
-void MainComponent::stopPlayback() {
-  juce::ScopedLock sl(midiLock);
-  isPlaying = false;
-  playbackCursor = 0;
-  beatsPlayedOnPause = 0.0;
-  trackGrid.playbackCursor = 0.0;
-  lastProcessedBeat = -1.0;
-}
 void MainComponent::takeSnapshot() {}
 void MainComponent::performUndo() { undoManager.undo(); }
 void MainComponent::performRedo() { undoManager.redo(); }
@@ -1508,6 +2368,7 @@ juce::String MainComponent::getLocalIPAddress() {
 void MainComponent::sliderDragEnded(juce::Slider *s) {
   if (s == &nudgeSlider) {
     s->setValue(0.0);
+    logPanel.log("! Nudge End", false);
     if (link) {
       auto state = link->captureAppSessionState();
       state.setTempo(baseBpm, link->clock().micros());
@@ -1516,19 +2377,123 @@ void MainComponent::sliderDragEnded(juce::Slider *s) {
   }
 }
 
-void MainComponent::sliderValueChanged(juce::Slider *s) {
-  // Handled via lambdas
+void MainComponent::sliderValueChanged(juce::Slider *s) {}
+bool MainComponent::isInterestedInFileDrag(const juce::StringArray &files) {
+  for (auto &f : files)
+    if (f.endsWithIgnoreCase(".mid") || juce::File(f).isDirectory())
+      return true;
+  return false;
 }
 
-bool MainComponent::isInterestedInFileDrag(const juce::StringArray &) {
-  return true;
-}
-
-void MainComponent::filesDropped(const juce::StringArray &f, int, int) {
-  if (!f.isEmpty()) {
-    juce::File file(f[0]);
-    if (file.hasFileExtension(".mid") || file.hasFileExtension(".midi")) {
-      loadMidiFile(file);
+void MainComponent::filesDropped(const juce::StringArray &files, int, int) {
+  bool firstLoaded = false;
+  for (auto &f : files) {
+    juce::File file(f);
+    if (!file.isDirectory() &&
+        (file.hasFileExtension(".mid") || file.hasFileExtension(".midi"))) {
+      playlist.addFile(file.getFullPathName());
+      if (!firstLoaded) {
+        loadMidiFile(file);
+        firstLoaded = true;
+      }
     }
   }
+}
+
+void MainComponent::toggleChannel(int ch, bool active) {
+  if (active)
+    activeChannels.insert(ch);
+  else
+    activeChannels.erase(ch);
+}
+
+int MainComponent::getSelectedChannel() const {
+  return activeChannels.empty() ? 1 : *activeChannels.begin();
+}
+
+void MainComponent::pausePlayback() {
+  if (!isPlaying)
+    return;
+  isPlaying = false;
+
+  // Calculate relative beat position for resume
+  if (link && link->isEnabled()) {
+    auto session = link->captureAppSessionState();
+    beatsPlayedOnPause = session.beatAtTime(link->clock().micros(), quantum) -
+                         transportStartBeat;
+  } else {
+    double nowMs = juce::Time::getMillisecondCounterHiRes();
+    double elapsedMs = nowMs - internalPlaybackStartTimeMs;
+    double bpm = bpmVal.get();
+    if (bpm < 1.0)
+      bpm = 120.0;
+    beatsPlayedOnPause = (elapsedMs * (bpm / 60000.0)) + beatsPlayedOnPause;
+  }
+
+  if (midiOutput) {
+    midiOutput->sendMessageNow(
+        juce::MidiMessage::allNotesOff(getSelectedChannel()));
+    if (btnMidiClock.getToggleState())
+      midiOutput->sendMessageNow(juce::MidiMessage(0xFC)); // Stop/Pause
+  }
+  if (isOscConnected)
+    oscSender.send(oscConfig.eStop.getText(), 1.0f);
+
+  logPanel.log("! Playback Paused (at beat " +
+                   juce::String(beatsPlayedOnPause, 2) + ")",
+               true);
+  juce::MessageManager::callAsync([this] { btnPlay.setButtonText("Play"); });
+}
+
+void MainComponent::stopPlayback() {
+  isPlaying = false;
+  pendingSyncStart = false;
+  beatsPlayedOnPause = 0.0;
+  playbackCursor = 0;
+  lastProcessedBeat = -1.0;
+
+  if (link && link->isEnabled()) {
+    auto session = link->captureAppSessionState();
+    session.setIsPlaying(false, link->clock().micros());
+    link->commitAppSessionState(session);
+  }
+
+  // All Notes Off
+  if (midiOutput) {
+    midiOutput->sendMessageNow(
+        juce::MidiMessage::allNotesOff(getSelectedChannel()));
+    if (btnMidiClock.getToggleState())
+      midiOutput->sendMessageNow(juce::MidiMessage(0xFC)); // Stop
+  }
+
+  if (isOscConnected)
+    oscSender.send(oscConfig.eStop.getText(), 1.0f);
+
+  logPanel.log("! Playback Stopped", true);
+  juce::MessageManager::callAsync([this] { btnPlay.setButtonText("Play"); });
+}
+
+void MainComponent::startPlayback() {
+  if (isPlaying)
+    return;
+
+  pendingSyncStart = true;
+  isPlaying = true; // Set for UI tracking
+
+  if (link && link->isEnabled()) {
+    logPanel.log("! Waiting for Link Sync...", true);
+  } else {
+    internalPlaybackStartTimeMs = juce::Time::getMillisecondCounterHiRes();
+    logPanel.log("! Playback Started", true);
+    if (midiOutput && btnMidiClock.getToggleState())
+      midiOutput->sendMessageNow(juce::MidiMessage(0xFA)); // Start
+    pendingSyncStart =
+        false; // Internal start is immediate here for now or aligned to BPM
+  }
+}
+
+void MainComponent::clearPlaybackSequence() {
+  playbackSeq.clear();
+  trackGrid.loadSequence(playbackSeq);
+  logPanel.log("! Sequence Cleared", true);
 }

@@ -50,6 +50,7 @@ target_sources(PatchworldBridge PRIVATE
 target_include_directories(PatchworldBridge PRIVATE 
     Source
     Source/Components
+    JuceLibraryCode
 )
 
 # 6. Link Libraries
