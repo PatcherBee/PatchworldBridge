@@ -18,7 +18,6 @@
 #include "SubComponents.h"
 #include "Tools.h"
 
-
 class MainComponent : public juce::AudioAppComponent,
                       public juce::Timer,
                       public juce::HighResolutionTimer,
@@ -123,6 +122,7 @@ private:
       btnArpSync;
   juce::TextButton btnPrOctUp, btnPrOctDown, btnSplit, btnRetrigger,
       btnMidiThru, btnMidiClock;
+  juce::ToggleButton btnResetMixerOnLoad{"Reset Mixer on Track Load"};
 
   // Custom Visualizers
   PhaseVisualizer phaseVisualizer;
@@ -182,7 +182,13 @@ private:
   juce::Array<int> heldNotes;
 
   // ComboBoxes
-  juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern;
+  juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern,
+      cmbClockMode;
+  juce::Slider sliderClockOffset; // For manual offset
+  juce::Label lblClockOffset;
+
+  enum ClockMode { Smooth, PhaseLocked };
+  ClockMode clockMode = Smooth;
 
   enum class AppView { Dashboard, Control, OSC_Config, Help };
   AppView currentView = AppView::Dashboard;

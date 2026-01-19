@@ -100,76 +100,77 @@ public:
                                     noteW, (float)h);
     };
 
-    // Draw Grid (aligned to keys)
-    for (int i = 0; i < 128; ++i) {
-      auto rect = getKeyRect(i);
-      float x = rect.getX();
-      // Draw line at left of key?
-      if (i % 12 == 0) // C
-        g.setColour(Theme::grid.withAlpha(0.5f));
-      else
-        g.setColour(Theme::grid.withAlpha(0.2f));
-
-      g.drawVerticalLine((int)x, 0.0f, (float)h);
-      if (i == 127)
-        g.drawVerticalLine((int)rect.getRight(), 0.0f, (float)h);
-    }
-
     // 0. Calculate Scales
     float speedScale =
         (zoomX > 0.1f ? zoomX : 50.0f) / 480.0f; // Faster default
     float timelineH = 22.0f;
 
-    // 1. Draw Background Grid (Beats)
-    g.setColour(Theme::grid.withAlpha(0.1f));
-    for (int beat = 0; beat < 100; ++beat) {
-      float tick = (float)(beat * 480);
-      float y = h - (tick - playbackCursor) * speedScale;
-      if (y > timelineH && y < h)
-        g.drawHorizontalLine((int)y, 0, (float)w);
-    }
+    // 1. Draw Background Grid (Beats) & Keys Grid (Only if showNotes)
+    if (showNotes) {
+      // Draw Grid (aligned to keys)
+      for (int i = 0; i < 128; ++i) {
+        auto rect = getKeyRect(i);
+        float x = rect.getX();
+        if (i % 12 == 0) // C
+          g.setColour(Theme::grid.withAlpha(0.5f));
+        else
+          g.setColour(Theme::grid.withAlpha(0.2f));
 
-    if (sequence && sequence->getNumEvents() > 0) {
-      // 2. Draw falling notes
-      juce::Graphics::ScopedSaveState ss(g);
-      g.reduceClipRegion(0, (int)timelineH, w, (int)(h - timelineH));
+        g.drawVerticalLine((int)x, 0.0f, (float)h);
+        if (i == 127)
+          g.drawVerticalLine((int)rect.getRight(), 0.0f, (float)h);
+      }
 
-      for (int i = 0; i < sequence->getNumEvents(); ++i) {
-        auto *ev = sequence->getEventPointer(i);
-        if (ev->message.isNoteOn()) {
-          auto note = ev->message.getNoteNumber();
-          int displayNote = note + (octaveShift * 12);
-          if (displayNote < 0 || displayNote > 127)
-            continue;
+      g.setColour(Theme::grid.withAlpha(0.1f));
+      for (int beat = 0; beat < 100; ++beat) {
+        float tick = (float)(beat * 480);
+        float y = h - (tick - playbackCursor) * speedScale;
+        if (y > timelineH && y < h)
+          g.drawHorizontalLine((int)y, 0, (float)w);
+      }
 
-          auto startTime = ev->message.getTimeStamp();
-          double endTime = startTime + 240.0; // Default duration
-          if (ev->noteOffObject)
-            endTime = ev->noteOffObject->message.getTimeStamp();
+      if (sequence && sequence->getNumEvents() > 0) {
+        // 2. Draw falling notes
+        juce::Graphics::ScopedSaveState ss(g);
+        g.reduceClipRegion(0, (int)timelineH, w, (int)(h - timelineH));
 
-          float currentTick = playbackCursor;
-          // Notes fall from top to keyboard at bottom
-          float yEnd = h - (float)(startTime - currentTick) * speedScale;
-          float yStart = h - (float)(endTime - currentTick) * speedScale;
+        for (int i = 0; i < sequence->getNumEvents(); ++i) {
+          auto *ev = sequence->getEventPointer(i);
+          if (ev->message.isNoteOn()) {
+            auto note = ev->message.getNoteNumber();
+            int displayNote = note + (octaveShift * 12);
+            if (displayNote < 0 || displayNote > 127)
+              continue;
 
-          if (yEnd < timelineH || yStart > h)
-            continue;
+            auto startTime = ev->message.getTimeStamp();
+            double endTime = startTime + 240.0; // Default duration
+            if (ev->noteOffObject)
+              endTime = ev->noteOffObject->message.getTimeStamp();
 
-          auto kRect = getKeyRect(displayNote);
-          float rectX = kRect.getX() + 1.0f;
-          float rectW = juce::jmax(2.0f, kRect.getWidth() - 1.0f);
-          float rectH = juce::jmax(2.0f, yEnd - yStart);
+            float currentTick = playbackCursor;
+            // Notes fall from top to keyboard at bottom
+            float yEnd = h - (float)(startTime - currentTick) * speedScale;
+            float yStart = h - (float)(endTime - currentTick) * speedScale;
 
-          g.setColour(
-              Theme::getChannelColor(ev->message.getChannel()).withAlpha(0.8f));
-          g.fillRect(rectX, yStart, rectW, rectH);
-          g.setColour(juce::Colours::white.withAlpha(0.3f));
-          g.drawRect(rectX, yStart, rectW, rectH, 0.5f);
+            if (yEnd < timelineH || yStart > h)
+              continue;
+
+            auto kRect = getKeyRect(displayNote);
+            float rectX = kRect.getX() + 1.0f;
+            float rectW = juce::jmax(2.0f, kRect.getWidth() - 1.0f);
+            float rectH = juce::jmax(2.0f, yEnd - yStart);
+
+            g.setColour(Theme::getChannelColor(ev->message.getChannel())
+                            .withAlpha(0.8f));
+            g.fillRect(rectX, yStart, rectW, rectH);
+            g.setColour(juce::Colours::white.withAlpha(0.3f));
+            g.drawRect(rectX, yStart, rectW, rectH, 0.5f);
+          }
         }
       }
     }
 
-    // 3. Timeline Header
+    // 3. Timeline Header (Always drawn)
     g.setColour(Theme::bgPanel.brighter(0.05f));
     g.fillRect(0.0f, 0.0f, (float)w, timelineH);
     g.setColour(Theme::grid.withAlpha(0.3f));
@@ -180,7 +181,7 @@ public:
       double duration = sequence->getEndTime();
       float progress =
           juce::jlimit(0.0f, 1.0f, (float)(playbackCursor / duration));
-      float markerX = progress * w;
+      float markerX = progress * (float)w;
 
       g.setColour(juce::Colours::yellow);
       g.drawVerticalLine((int)markerX, 0.0f, timelineH);
@@ -193,4 +194,10 @@ public:
   }
 
   void timerCallback() override { repaint(); }
+
+  bool showNotes = true;
+  void setShowNotes(bool shouldShow) {
+    showNotes = shouldShow;
+    repaint();
+  }
 };

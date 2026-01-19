@@ -492,9 +492,13 @@ MainComponent::MainComponent()
   };
 
   addAndMakeVisible(btnPanic);
-  btnPanic.setButtonText("P");
-  btnPanic.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
+  btnPanic.setButtonText("Panic");
+  btnPanic.setColour(juce::TextButton::buttonColourId, juce::Colours::darkred);
   btnPanic.onClick = [this] { sendPanic(); };
+
+  lblPIn.setText("In", juce::dontSendNotification);
+  lblPOut.setText("Out", juce::dontSendNotification);
+  btnBlockMidiOut.setButtonText("Block");
 
   addAndMakeVisible(btnRetrigger);
   btnRetrigger.setButtonText("Retrig");
@@ -710,7 +714,7 @@ MainComponent::MainComponent()
         (int)(horizontal ? sliderModH.getValue() : sliderModV.getValue());
     auto mp = juce::MidiMessage::pitchWheel(ch, pVal);
     auto mm = juce::MidiMessage::controllerEvent(ch, 1, mVal);
-    if (midiOutput) {
+    if (midiOutput && !btnBlockMidiOut.getToggleState()) {
       midiOutput->sendMessageNow(mp);
       midiOutput->sendMessageNow(mm);
     }
@@ -756,9 +760,39 @@ MainComponent::MainComponent()
   };
 
   // --- Components Add ---
-  trackGrid.setKeyboardComponent(&horizontalKeyboard);
-  trackGrid.wheelStripWidth = 50; // Align with Keyboard's wheel offset
   addAndMakeVisible(trackGrid);
+  trackGrid.setKeyboardComponent(&horizontalKeyboard);
+  trackGrid.wheelStripWidth = 50; // Align with Keyboard's
+  addAndMakeVisible(btnResetMixerOnLoad);
+  btnResetMixerOnLoad.setToggleState(mixer.isResetOnLoad,
+                                     juce::dontSendNotification);
+  mixer.isResetOnLoad = btnResetMixerOnLoad.getToggleState();
+
+  // Clock Offset & Mode Controls
+  addAndMakeVisible(cmbClockMode);
+  cmbClockMode.addItem("Smooth (Default)", 1);
+  cmbClockMode.addItem("Phase Locked (Hard)", 2);
+  cmbClockMode.setSelectedId(1, juce::dontSendNotification);
+  cmbClockMode.onChange = [this] {
+    clockMode = (ClockMode)(cmbClockMode.getSelectedId() - 1);
+    logPanel.log("! Clock Mode: " + cmbClockMode.getText(), true);
+  };
+
+  addAndMakeVisible(sliderClockOffset);
+  sliderClockOffset.setRange(-50.0, 50.0, 0.1);
+  sliderClockOffset.setValue(0.0);
+  sliderClockOffset.setSliderStyle(juce::Slider::LinearBar);
+  sliderClockOffset.setTextValueSuffix(" ms");
+
+  addAndMakeVisible(lblClockOffset);
+  lblClockOffset.setFont(juce::FontOptions(12.0f));
+  lblClockOffset.setText("Clock Offset", juce::dontSendNotification);
+
+  // BINDING SEQUENCER RESET
+  sequencer.btnResetCH.onClick = [this] { mixer.resetMapping(); };
+
+  // Setup Visualizers
+  addAndMakeVisible(phaseVisualizer);
   addAndMakeVisible(horizontalKeyboard);
   addAndMakeVisible(verticalKeyboard);
   addAndMakeVisible(logPanel);
@@ -1071,13 +1105,15 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
         rawVal = (float)arg.getInt32();
 
       if (isMidiScaling127) {
-        // Expecting 0-127 input
+        // Expecting 0-127 input. Return internally as 0.0-1.0
         return juce::jlimit(0.0f, 1.0f, rawVal / 127.0f);
       } else {
-        // Expecting 0-1 input (Legacy)
+        // Expecting 0.0-1.0 input (Legacy). BUT treat Ints as 0-127 safe
+        // fallback to prevent single-integer '1' being interpreted as full
+        // scale 127.
         if (arg.isInt32())
-          return juce::jlimit(0.0f, 1.0f,
-                              rawVal / 127.0f); // Ints are likely 0-127 anyway?
+          return juce::jlimit(0.0f, 1.0f, rawVal / 127.0f);
+        // Float 0-1
         return juce::jlimit(0.0f, 1.0f, rawVal);
       }
     };
@@ -1091,6 +1127,9 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
       isHandlingOsc = true;
       if (vel <= 0.001f) {
         keyboardState.noteOff(i, note, 0.0f);
+        // NoteOff handling usually sends to MIDI/OSC via listeners, but if
+        // isHandlingOsc=true, listeners might skip? handleNoteOff checks
+        // isHandlingOsc? No. check handleNoteOff logic.
       } else {
         keyboardState.noteOn(i, note, vel);
         double durationMs = this->getDurationFromVelocity(vel);
@@ -1117,8 +1156,11 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
           (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
       lastReceivedCC[i] = ccNum;
       if (m.size() > 1) {
-        int ccVal = (int)(getDynamicValue(m, 1) * 127.0f);
-        if (midiOutput)
+        // User reports permanent 127 value? Let's check scaling.
+        // getDynamicValue returns 0.0-1.0. We multiply by 127 for MIDI.
+        float rawVal = getDynamicValue(m, 1);
+        int ccVal = (int)(rawVal * 127.0f);
+        if (midiOutput && !btnBlockMidiOut.getToggleState())
           midiOutput->sendMessageNow(
               juce::MidiMessage::controllerEvent(i, ccNum, ccVal));
       }
@@ -1129,7 +1171,7 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
     if (addr == oscConfig.eRXcv.getText().replace("{X}", sCh)) {
       int ccNum = lastReceivedCC[i];
       int ccVal = (int)(getDynamicValue(m, 0) * 127.0f);
-      if (midiOutput)
+      if (midiOutput && !btnBlockMidiOut.getToggleState())
         midiOutput->sendMessageNow(
             juce::MidiMessage::controllerEvent(i, ccNum, ccVal));
       return;
@@ -1137,7 +1179,7 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
 
     // Pitch Wheel
     if (addr == oscConfig.eRXwheel.getText().replace("{X}", sCh)) {
-      if (midiOutput)
+      if (midiOutput && !btnBlockMidiOut.getToggleState())
         midiOutput->sendMessageNow(juce::MidiMessage::pitchWheel(
             i, (int)(getDynamicValue(m, 0) * 16383.0f)));
       return;
@@ -1145,7 +1187,7 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
 
     // Aftertouch
     if (addr == oscConfig.eRXpress.getText().replace("{X}", sCh)) {
-      if (midiOutput)
+      if (midiOutput && !btnBlockMidiOut.getToggleState())
         midiOutput->sendMessageNow(juce::MidiMessage::channelPressureChange(
             i, (int)(getDynamicValue(m, 0) * 127.0f)));
       return;
@@ -1325,21 +1367,79 @@ void MainComponent::hiResTimerCallback() {
   }
 
   // --- CLOCK GEN ---
+  // --- CLOCK GEN ---
   if (btnMidiClock.getToggleState() && midiOutput) {
+    // 0. Parameters
     double currentBpm = (link && link->isEnabled())
                             ? link->captureAppSessionState().tempo()
                             : bpmVal.get();
-    double msPerTick = (60000.0 / currentBpm) / 24.0; // 24 PPQ
 
-    static double lastClockSendTime = nowMs;
-    double timeSinceLastTick = nowMs - lastClockSendTime;
+    // Safety clamp
+    if (currentBpm < 1.0)
+      currentBpm = 120.0;
 
-    if (timeSinceLastTick >= msPerTick) {
-      int numTicksToSend = (int)(timeSinceLastTick / msPerTick);
-      for (int i = 0; i < numTicksToSend; ++i) {
-        midiOutput->sendMessageNow(juce::MidiMessage(0xF8)); // MIDI Clock
+    double offsetMs = sliderClockOffset.getValue();
+
+    // 1. PHASE LOCKED MODE (New)
+    if (clockMode == PhaseLocked && link && link->isEnabled()) {
+      auto state = link->captureAppSessionState();
+
+      // Calculate beat at 'now + offset'
+      double timeForBeat = (juce::Time::getMillisecondCounterHiRes() * 1000.0) +
+                           (offsetMs * 1000.0);
+      double currentBeat = state.beatAtTime(
+          std::chrono::microseconds((long long)timeForBeat), quantum);
+
+      static double lastLinkBeatFunc = 0.0;
+
+      // Initialize if jump detected (e.g. invalid state or first run)
+      if (lastLinkBeatFunc > currentBeat + 1.0)
+        lastLinkBeatFunc = currentBeat;
+
+      double expectedTicks = std::floor(currentBeat * 24.0);
+      double lastTicks = std::floor(lastLinkBeatFunc * 24.0);
+
+      int ticksToSend = (int)(expectedTicks - lastTicks);
+      if (ticksToSend > 0 && ticksToSend < 10) { // Limit burst
+        for (int i = 0; i < ticksToSend; ++i) {
+          if (midiOutput && !btnBlockMidiOut.getToggleState())
+            midiOutput->sendMessageNow(juce::MidiMessage(0xF8));
+        }
       }
-      lastClockSendTime += (numTicksToSend * msPerTick);
+
+      lastLinkBeatFunc = currentBeat;
+
+    } else {
+      // 2. SMOOTH MODE (Legacy / Fallback)
+      double msPerTick = (60000.0 / currentBpm) / 24.0;
+
+      static double lastClockSendTime = nowMs;
+
+      // Apply offset logic to "Target Time" if needed?
+      // For free-running clock, "Offset" acts as a start delay or phase shift?
+      // Hard to apply variable offset to free-run rate without hiccups.
+      // We'll apply it by effectively modulating the 'now' time processing?
+      // Simpler: Just run the timer.
+      // User asked toggles for "realtime sequencing". Phase Locked is the key.
+
+      // Recover from huge gaps (e.g. pause)
+      if (nowMs - lastClockSendTime > 200.0)
+        lastClockSendTime = nowMs;
+
+      double timeSinceLastTick = nowMs - lastClockSendTime;
+
+      if (timeSinceLastTick >= msPerTick) {
+        int numTicksToSend = (int)(timeSinceLastTick / msPerTick);
+        // Cap burst to avoid flooding
+        if (numTicksToSend > 5)
+          numTicksToSend = 5;
+
+        for (int i = 0; i < numTicksToSend; ++i) {
+          if (midiOutput && !btnBlockMidiOut.getToggleState())
+            midiOutput->sendMessageNow(juce::MidiMessage(0xF8));
+        }
+        lastClockSendTime += (numTicksToSend * msPerTick);
+      }
     }
   }
 
@@ -1422,7 +1522,8 @@ void MainComponent::hiResTimerCallback() {
           // Fire Start/Continue MIDI
           if (isOscConnected)
             oscSender.send(oscConfig.ePlay.getText(), 1.0f);
-          if (midiOutput && btnMidiClock.getToggleState())
+          if (midiOutput && btnMidiClock.getToggleState() &&
+              !btnBlockMidiOut.getToggleState()) // Added check
             midiOutput->sendMessageNow(juce::MidiMessage(0xFA));
         } else {
           return; // Waiting for sync
@@ -1431,6 +1532,18 @@ void MainComponent::hiResTimerCallback() {
     }
   } else {
     // Internal Lock
+    static double lastSpeedMult = 1.0;
+    double speedMult = 1.0;
+
+    // Time Mode Momentary Speed Up (Only if Link is OFF)
+    // User: "Holding 1/32 makes the sequencer fly... at 8x speed."
+    // 1/32 gives activeRollDiv = 32. Normal 1/4 gives 4.
+    // 32/4 = 8.
+    if (sequencer.getMode() == StepSequencer::Time &&
+        sequencer.activeRollDiv > 0) {
+      speedMult = (double)sequencer.activeRollDiv / 4.0;
+    }
+
     if (isPlaying) {
       if (pendingSyncStart) {
         pendingSyncStart = false;
@@ -1438,15 +1551,34 @@ void MainComponent::hiResTimerCallback() {
         lastProcessedBeat = -1.0;
         if (isOscConnected)
           oscSender.send(oscConfig.ePlay.getText(), 1.0f);
-        if (midiOutput && btnMidiClock.getToggleState())
+        if (midiOutput && btnMidiClock.getToggleState() &&
+            !btnBlockMidiOut.getToggleState()) // Added check
           midiOutput->sendMessageNow(juce::MidiMessage(0xFA));
       }
+
+      // Handle Speed Change Discontinuity to prevent playhead jumping
+      if (std::abs(speedMult - lastSpeedMult) > 0.001) {
+        // Calculate beats played so far using current rate before switching
+        double currentBpm = bpmVal.get();
+        if (currentBpm < 1.0)
+          currentBpm = 120.0;
+        double beatsPerMs = currentBpm / 60000.0;
+
+        double elapsedMs = nowMs - internalPlaybackStartTimeMs;
+        double beatsSinceStart = elapsedMs * beatsPerMs * lastSpeedMult;
+
+        beatsPlayedOnPause += beatsSinceStart;
+        internalPlaybackStartTimeMs = nowMs;
+      }
+      lastSpeedMult = speedMult;
+
       double elapsedMs = nowMs - internalPlaybackStartTimeMs;
       double currentBpm = bpmVal.get();
       if (currentBpm < 1.0)
         currentBpm = 120.0;
       double beatsPerMs = currentBpm / 60000.0;
-      currentBeat = (elapsedMs * beatsPerMs) + beatsPlayedOnPause;
+
+      currentBeat = (elapsedMs * beatsPerMs * speedMult) + beatsPlayedOnPause;
     } else {
       currentBeat = beatsPlayedOnPause;
     }
@@ -1774,11 +1906,13 @@ void MainComponent::updateVisibility() {
   btnMidiClock.setVisible(false);
 
   // MIDI I/O Group
-  // User: "I need the midi i/o to hide" (when in menus)
-  grpIo.setVisible(isDash && !isOverlayActive);
+  // User: "In Control menu hide the Midi i/o midi in/out/ch drop down menu"
+  grpIo.setVisible(isDash && !controlPage.isVisible());
 
   // Dashboard - Default Mode Only
   bool isDefault = isDash && !isSimple && !isOverlayActive;
+
+  trackGrid.setShowNotes(!isSimple); // Hide notes in Simple Mode
 
   trackGrid.setVisible(isDefault);
   horizontalKeyboard.setVisible(isDefault);
@@ -1822,13 +1956,26 @@ void MainComponent::updateVisibility() {
   if (isSimpleDash) {
     logPanel.setVisible(true);
     playlist.setVisible(true);
+    // Simple Mode additions:
+    trackGrid.setVisible(true);    // Timeline top
+    sliderPitchV.setVisible(true); // Wheels bottom left
+    sliderModV.setVisible(true);
   }
+
+  // Help Menu Toggle
+  // Help Menu Toggle
+  bool isHelp = (currentView == AppView::Help);
+  btnResetMixerOnLoad.setVisible(isHelp);
+  cmbClockMode.setVisible(isHelp);
+  sliderClockOffset.setVisible(isHelp);
+  lblClockOffset.setVisible(isHelp);
 }
 
 void MainComponent::resized() {
-  logoView.setBounds(10, 5, 25, 25);
-  lblLocalIpHeader.setBounds(45, 5, 50, 25);
-  lblLocalIpDisplay.setBounds(100, 5, 120, 25);
+  int logoYOffset = 2; // "hair down"
+  logoView.setBounds(10, 8 + logoYOffset, 25, 25);
+  lblLocalIpHeader.setBounds(45, 8 + logoYOffset, 50, 25);
+  lblLocalIpDisplay.setBounds(100, 8 + logoYOffset, 120, 25);
 
   auto area = getLocalBounds().reduced(5);
 
@@ -1843,47 +1990,50 @@ void MainComponent::resized() {
   btnHelp.setBounds(navArea.removeFromLeft(btnW).reduced(2));
 
   // --- TOP RIGHT ACTIONS ---
-  // Default Layout: "move Thru to very top of app to the left of Panic."
-  // Note: Panic is "Left of Panic" -> Thru, Panic.
-
   if (!isSimpleMode && currentView == AppView::Dashboard) {
+    // "In default layout ... move Retrig to left of the Midi Thru button"
     btnPanic.setBounds(headerRow.removeFromRight(85).reduced(2));
+    btnPanic.setButtonText("Panic");
     btnMidiThru.setBounds(headerRow.removeFromRight(50).reduced(2));
+    btnRetrigger.setBounds(headerRow.removeFromRight(60).reduced(2));
   } else {
-    // Simple Mode: Panic is top right corner
-    // Or Help menu: Panic preserved
-    btnPanic.setBounds(headerRow.removeFromRight(85).reduced(2));
+    // Simple Mode: Panic is "P" top right
+    btnPanic.setBounds(headerRow.removeFromRight(30).reduced(2));
+    btnPanic.setButtonText("P");
   }
-  btnPanic.setButtonText("Panic");
   btnGPU.setBounds(headerRow.removeFromRight(50).reduced(2));
 
-  // Retrigger
-  if (currentView == AppView::Dashboard) {
-    btnRetrigger.setBounds(headerRow.removeFromRight(60).reduced(2));
-  }
-
-  // --- OVERLAY HANDLING WITH SPECIAL BPM PLACEMENT ---
+  // --- OVERLAY HANDLING ---
   if (currentView != AppView::Dashboard) {
-    auto overlayRect = getLocalBounds().reduced(40).withY(50);
-
-    // "move the bpm slider to the very top left where My IP: was while in
-    // Control/OSc Config/Help menus" IP was at (100, 5, 120, 25). Let's place
-    // it roughly there or slightly below header if needed. Actually headerRow
-    // was removeFromTop. The IP Labels are hidden in updateVisibility.
+    auto overlayRect = getLocalBounds().reduced(20).withY(50);
+    // Move BPM slider to top left (My IP area)
+    tempoSlider.setVisible(true);
     tempoSlider.setBounds(60, 5, 140, 25);
-    // Just force it there.
 
     if (currentView == AppView::OSC_Config)
       oscViewport.setBounds(overlayRect);
     else if (currentView == AppView::Help) {
       helpViewport.setBounds(overlayRect);
-      // Move scaling to top left of Help area to avoid blocking text
-      btnMidiScaling.setBounds(overlayRect.getX() + 10, overlayRect.getY() + 10,
-                               120, 25);
-      btnMidiScalingToggle.setBounds(overlayRect.getX() + 140,
-                                     overlayRect.getY() + 10, 150, 25);
-    } else
+      int startY = overlayRect.getY() + 10;
+      int startX = overlayRect.getX() + 10;
+
+      btnMidiScaling.setBounds(startX, startY, 120, 25);
+      btnMidiScalingToggle.setBounds(startX + 130, startY, 150, 25);
+
+      // Clock Controls
+      cmbClockMode.setBounds(startX, startY + 35, 120, 25);
+      lblClockOffset.setBounds(startX + 130, startY + 35, 80, 25);
+      sliderClockOffset.setBounds(startX + 220, startY + 35, 100, 25);
+
+      btnResetMixerOnLoad.setBounds(overlayRect.getRight() - 220, startY, 200,
+                                    25); // Top Right corner roughly
+    } else {
       controlPage.setBounds(overlayRect);
+      if (controlPage.isVisible()) {
+        lblLatencyComp.setBounds(20, 20, 120, 20);
+        sliderLatencyComp.setBounds(20, 45, 200, 20);
+      }
+    }
     return;
   }
 
@@ -1893,7 +2043,11 @@ void MainComponent::resized() {
     lblLocalIpHeader.setVisible(false);
     lblLocalIpDisplay.setVisible(false);
 
-    // --- TOP: MIDI I/O Strip ---
+    // Timeline Top (Right of where Vertical KB will start?)
+    // User: "In simple mode we need a timeline with playhead indicator along
+    // the top below midi io/above log" "poositon to right of the vveritcal
+    // piano roll" Vertical KB is on Left. So Timeline is Top of Center Area.
+
     auto midiArea = r.removeFromTop(65).reduced(2);
     grpIo.setBounds(midiArea);
     auto rMidi = grpIo.getBounds().reduced(10, 20);
@@ -1903,128 +2057,89 @@ void MainComponent::resized() {
     cmbMidiCh.setBounds(rMidi.removeFromLeft(50));
     lblOut.setBounds(rMidi.removeFromLeft(20));
     cmbMidiOut.setBounds(rMidi.removeFromLeft(90));
-
     btnSplit.setBounds(rMidi.removeFromLeft(45).reduced(2));
     btnMidiThru.setBounds(rMidi.removeFromLeft(45).reduced(2));
-
-    // "In its place (Panic's old place) you can put the Block Out button" (Old
-    // Panic was top right... Wait) "In simple mode layout I want the "P" panic
-    // button placed very top right corner of app." "In its place you can put
-    // the Block Out button ."
-    // --> This might mean "Where Panic was in the I/O strip or Header?"
-    // Panic was in Header. Block Out is usually in I/O.
-    // Let's assume user wants Block Out in the Header where Panic used to be?
-    // "Thru to very top of app to the left of Panic." (Default)
-
-    // Re-reading: "In simple mode layout I want the "P" panic button placed
-    // very top right corner of app. In its place you can put the Block Out
-    // button" Usually Panic IS top right. Maybe they mean in Simple Mode the
-    // Panic was moved?? In logic above, I put Panic top right. So Block Out
-    // should go where? Maybe they mean "In the simple mode I/O strip where
-    // Panic WAS?" (Panic wasn't in I/O strip in previous code). Let's put Block
-    // Out in the I/O strip for now, similar to Default. OR: "Next in simple
-    // mode layout ... move the 2 sliders ... buttons to be above the bpm slide"
-
+    btnBlockMidiOut.setVisible(true);
     btnRetrigger.setBounds(rMidi.removeFromLeft(45).reduced(2));
-
-    // Simple Mode: Block Out is typically near I/O
-    if (!btnPanic.isVisible()) // Should be visible
-      btnBlockMidiOut.setBounds(
-          headerRow.removeFromRight(80).reduced(2)); // Try Header?
-    else
-      btnBlockMidiOut.setBounds(rMidi.removeFromLeft(45).reduced(2));
+    btnBlockMidiOut.setBounds(rMidi.removeFromLeft(45).reduced(2));
 
     btnMidiClock.setVisible(false);
 
     // --- BOTTOM TRANSPORT ---
-    auto transportArea = area.removeFromBottom(50).reduced(10, 5);
-
-    // "Simple mode layout ... move the Clear button over to the left next to
-    // the > button, in its place we will move/put the tap tempo button."
-    // "Reduce width of piano roll to make room for playback control along the
-    // very bottom." "Move bpm slider to veryright side and dont have it too
-    // wide."
-
-    // Left: Clear, Play, Stop, Prev, Skip
+    auto transportArea = r.removeFromBottom(50).reduced(2);
+    // Left: Pitch/Mod, Clear, Play...
+    // "beside to the left of the Clear button ... super small juce mod/pitch
+    // wheel"
+    sliderPitchV.setBounds(transportArea.removeFromLeft(20).reduced(2));
+    sliderModV.setBounds(transportArea.removeFromLeft(20).reduced(2));
     btnClearPR.setBounds(transportArea.removeFromLeft(50).reduced(2));
     btnPlay.setBounds(transportArea.removeFromLeft(50).reduced(2));
     btnStop.setBounds(transportArea.removeFromLeft(50).reduced(2));
     btnPrev.setBounds(transportArea.removeFromLeft(40).reduced(2));
     btnSkip.setBounds(transportArea.removeFromLeft(40).reduced(2));
 
-    // Right: BPM Slider (Narrow), Tap Tempo (in old Clear spot -> Rightish?)
-    // "move/put the tap tempo button" (in Clear's old place? Clear was usually
-    // right side?) Layout: [Clear] [Play] [Stop] ...         [Tap] [BPM]
-
+    // Right side: BPM etc
     auto bpmRegion = transportArea.removeFromRight(150);
-    tempoSlider.setBounds(bpmRegion.removeFromRight(80).reduced(2)); // Narrower
+    tempoSlider.setBounds(bpmRegion.removeFromRight(80).reduced(2));
     btnTapTempo.setBounds(bpmRegion.removeFromRight(60).reduced(2));
     btnResetBPM.setBounds(transportArea.removeFromRight(60).reduced(2));
 
-    // --- LEFT COLUMN: VERTICAL KEYBOARD ---
-    auto leftCol = r.removeFromLeft(35); // Narrower
+    // Left Column: Vertical Keyboard
+    auto leftCol = r.removeFromLeft(35);
     verticalKeyboard.setBounds(
-        leftCol.withHeight(juce::jmin(leftCol.getHeight(), 350))); // Shorter
+        leftCol.withHeight(juce::jmin(leftCol.getHeight(), 350)));
 
-    // --- RIGHT COLUMN: LINK / PHASE / SLIDERS ---
-    auto rightPan = area.removeFromRight(140).reduced(5);
-    rightPan.removeFromTop(80);
+    // Right Column: Sliders
+    auto rightPan = r.removeFromRight(140).reduced(5);
+    // "lower the two sliders" -> Push to bottom
+    // "link beat step indicator top right under that new timeline"
 
-    // "Simple mode layout move the 2 sliders and its cc buttons to be above the
-    // bpm slide on the bottom right, make the sliders a little taller aswell."
-    // We need to push them to Bottom of RightPan?
+    // Timeline consumes top of center area
+    auto timelineH = 40;
+    auto topCenter = r.removeFromTop(timelineH);
+    trackGrid.setBounds(topCenter.reduced(2));
 
-    auto rightBottom = rightPan.removeFromBottom(250); // Space for sliders
-
-    // Sliders
-    // "make the sliders a little taller aswell"
-    // 2 Sliders.
-    auto sl1 = rightBottom.removeFromBottom(100);
-    btnVol2CC.setBounds(sl1.removeFromBottom(20).reduced(2));
-    txtVol2Osc.setBounds(sl1.removeFromBottom(20).reduced(5, 0));
-    vol2Simple.setBounds(sl1.reduced(25, 0)); // Taller
-
-    auto sl2 = rightBottom.removeFromBottom(100);
-    btnVol1CC.setBounds(sl2.removeFromBottom(20).reduced(2));
-    txtVol1Osc.setBounds(sl2.removeFromBottom(20).reduced(5, 0));
-    vol1Simple.setBounds(sl2.reduced(25, 0)); // Taller
-
-    phaseVisualizer.setBounds(rightPan.removeFromTop(20));
+    // Link Indicator (Top Right of Right Panel, under timeline level?)
     phaseVisualizer.setVisible(true);
+    phaseVisualizer.setBounds(rightPan.removeFromTop(20));
 
-    // --- CENTER: LOG & PLAYLIST (Reduced Width/Height) ---
-    // User: "Keep log/play list tight to left beside the piano roll"
-    // In Simple Mode, Vertical Keyboard is at 'leftCol' (35px width).
-    // We want Log/Playlist immediately to the right of that.
+    auto rightBottom = rightPan.removeFromBottom(250); // Sliders area
+    auto topOctRow = rightBottom.removeFromTop(30);
+    btnPrOctDown.setBounds(
+        topOctRow.removeFromLeft(topOctRow.getWidth() / 2).reduced(2));
+    btnPrOctUp.setBounds(topOctRow.reduced(2));
 
-    // We reduced 'r' by 35 (Left) and 140 (Right).
-    // So 'r' is the center region.
-    // 'r.getX()' should be approx 40.
+    auto sliderRow = rightBottom.removeFromTop(180);
+    auto s1Area = sliderRow.removeFromLeft(sliderRow.getWidth() / 2);
+    auto s2Area = sliderRow;
 
-    auto centerArea = r;
-    // User: "Keep log/play list tight to left beside the piano roll"
-    // "Reduced in width and height"
-    auto tightLeft = centerArea.removeFromLeft(180); // Even narrower
+    vol1Simple.setBounds(s1Area.removeFromTop(140).reduced(15, 5));
+    txtVol1Osc.setBounds(s1Area.removeFromTop(20).reduced(5, 2));
+    btnVol1CC.setBounds(s1Area.reduced(5, 0));
 
+    vol2Simple.setBounds(s2Area.removeFromTop(140).reduced(15, 5));
+    txtVol2Osc.setBounds(s2Area.removeFromTop(20).reduced(5, 2));
+    btnVol2CC.setBounds(s2Area.reduced(5, 0));
+
+    // Center: Playlist/Log
+    // "Keep log/play list tight to left beside the piano roll"
+    // "Tighten up... dont have overlapping"
+    auto tightLeft = r.removeFromLeft(180);
     logPanel.setBounds(tightLeft.removeFromTop(120).reduced(2));
     playlist.setBounds(tightLeft.removeFromTop(150).reduced(2));
 
     return;
   }
 
+  // --- 4. DEFAULT (DASHBOARD) MODE LAYOUT ---
   lblLocalIpHeader.setVisible(true);
   lblLocalIpDisplay.setVisible(true);
 
-  // --- 4. DEFAULT (DASHBOARD) MODE LAYOUT ---
   auto r = area;
 
   // Header Items Row
   auto configRow = r.removeFromTop(65);
-
-  // "also make the connect/disconnect button a touch wider"
-  // Needs to steal space from others.
-
-  grpNet.setBounds(configRow.removeFromLeft(400).reduced(2)); // Widen Group
+  grpNet.setBounds(configRow.removeFromLeft(400).reduced(2));
   lblLocalIpHeader.setVisible(!isSimpleMode);
   lblLocalIpDisplay.setVisible(!isSimpleMode);
   auto rNet = grpNet.getBounds().reduced(5, 15);
@@ -2034,8 +2149,13 @@ void MainComponent::resized() {
   edPOut.setBounds(rNet.removeFromLeft(50));
   lblPIn.setBounds(rNet.removeFromLeft(25));
   edPIn.setBounds(rNet.removeFromLeft(50));
-
-  btnConnect.setBounds(rNet.removeFromLeft(90).reduced(2)); // Wider (was 70)
+  btnConnect.setBounds(rNet.removeFromLeft(90).reduced(
+      2)); // Moved slightly right via reduced padding?
+  // User: "move ... to the right a couple px"
+  // Previous: reduced(2). x is set by removeFromLeft.
+  // To move RIGHT, I need a larger X. removeFromLeft increments X.
+  // I can just add a gap.
+  rNet.removeFromLeft(5); // Shift connect button right 5px
   ledConnect.setBounds(rNet.removeFromLeft(30).reduced(5));
 
   grpIo.setBounds(configRow.reduced(2));
@@ -2046,14 +2166,7 @@ void MainComponent::resized() {
   cmbMidiCh.setBounds(rMidi.removeFromLeft(50));
   lblOut.setBounds(rMidi.removeFromLeft(20));
   cmbMidiOut.setBounds(rMidi.removeFromLeft(100));
-
-  // "next in default view to the right of midi out port place the Block Out ...
-  // button"
   btnBlockMidiOut.setBounds(rMidi.removeFromLeft(80).reduced(2));
-
-  // Note: Thru moved to Header (Left of Panic)
-  // btnMidiThru.setBounds(rMidi.removeFromLeft(50).reduced(2));
-
   btnMidiClock.setVisible(false);
 
   // Transport Row
@@ -2062,22 +2175,26 @@ void MainComponent::resized() {
   btnStop.setBounds(transRow.removeFromLeft(45).reduced(2));
   btnPrev.setBounds(transRow.removeFromLeft(35).reduced(2));
   btnSkip.setBounds(transRow.removeFromLeft(35).reduced(2));
+
+  // "move the default view BPM/BPM slider to the left next to Clear button"
   btnClearPR.setBounds(transRow.removeFromLeft(55).reduced(2));
-
-  // "slightly move the bpm slider to the left and widen it"
   lblTempo.setBounds(transRow.removeFromLeft(40));
+  // "slighty widen slider width"
   tempoSlider.setBounds(
-      transRow.removeFromLeft(130).reduced(0, 5)); // Wider (was 110)
-  btnResetBPM.setBounds(transRow.removeFromLeft(70).reduced(2));
+      transRow.removeFromLeft(160).reduced(0, 5)); // Widened (was 140)
+  btnResetBPM.setBounds(transRow.removeFromLeft(50).reduced(
+      2)); // Reduced reset button space to fit? No, just shifted.
 
-  // "move the Link button to the right of the visual beat step indicator"
+  // "move over link/beat visual indicator" (Right of BPM Reset)
   phaseVisualizer.setVisible(true);
-  phaseVisualizer.setBounds(transRow.removeFromLeft(120).reduced(2));
+  phaseVisualizer.setBounds(transRow.removeFromLeft(100).reduced(2));
   btnLinkToggle.setVisible(true);
-  btnLinkToggle.setBounds(
-      transRow.removeFromLeft(60).reduced(2)); // Right of Phase
+  btnLinkToggle.setBounds(transRow.removeFromLeft(60).reduced(2));
 
-  // Buttons shifted right
+  // "restore the Oct- and move over"
+  btnPrOctDown.setVisible(true);
+  btnPrOctUp.setVisible(true);
+  // Shift others right
   btnSplit.setBounds(transRow.removeFromRight(55).reduced(2));
   btnPrOctUp.setBounds(transRow.removeFromRight(45).reduced(2));
   btnPrOctDown.setBounds(transRow.removeFromRight(45).reduced(2));
@@ -2096,6 +2213,7 @@ void MainComponent::resized() {
 
   // Right Side
   auto rightSide = r.removeFromRight(260).reduced(2);
+  // "playlist is too tall reduce height by a abit"
   logPanel.setBounds(rightSide.removeFromTop(200));
 
   // Arp Gen Controls
@@ -2103,37 +2221,30 @@ void MainComponent::resized() {
   auto leftCol = ar.removeFromLeft(65);
   btnArp.setBounds(leftCol.removeFromTop(20).reduced(1));
   btnArpSync.setBounds(leftCol.removeFromTop(20).reduced(1));
-  // Block Out moved to MIDI strip
-  // btnBlockMidiOut.setBounds(leftCol.removeFromTop(20).reduced(1));
-
   auto dialW = 55;
   auto dialS = ar.removeFromLeft(dialW);
   sliderArpSpeed.setBounds(dialS.removeFromTop(45));
   lblArpSpdLabel.setBounds(dialS.removeFromTop(15));
-
   auto dialV = ar.removeFromLeft(dialW);
   sliderArpVel.setBounds(dialV.removeFromTop(45));
   lblArpVelLabel.setBounds(dialV.removeFromTop(15));
-
-  // Shorten Pattern menu
   cmbArpPattern.setBounds(ar.removeFromTop(35).reduced(2, 5));
 
-  playlist.setBounds(rightSide.reduced(0, 5));
+  // Reduced playlist height
+  // Reduced playlist height MORE
+  playlist.setBounds(rightSide.reduced(0, 5).withHeight(
+      rightSide.getHeight() - 60)); // User: "reduce height of playlist more"
 
-  // Center Area (Timeline -> Grid -> KB -> Seq)
+  // Center Area
   auto center = r.reduced(2);
   sequencer.setBounds(center.removeFromBottom(120));
-
-  // Pitch/Mod aligned with Keyboard
   auto kbArea = center.removeFromBottom(80);
   auto wheelsL = kbArea.removeFromLeft(50);
   sliderPitchH.setBounds(wheelsL.removeFromLeft(22).reduced(2, 5));
   sliderModH.setBounds(wheelsL.removeFromLeft(22).reduced(2, 5));
   horizontalKeyboard.setBounds(kbArea);
-
   wheelFutureBox.setBounds(wheelsL.getX(), center.getY(), 44,
                            center.getHeight() - 80);
-
   trackGrid.setBounds(center);
 
   // --- Overlays ---
@@ -2142,10 +2253,8 @@ void MainComponent::resized() {
   controlPage.setBounds(getLocalBounds().reduced(20));
 
   if (controlPage.isVisible()) {
-    // Manual layout for Control Page children if ControlPage doesn't have a
-    // Layout
     lblLatencyComp.setBounds(20, 20, 120, 20);
-    sliderLatencyComp.setBounds(150, 20, 200, 20);
+    sliderLatencyComp.setBounds(20, 45, 200, 20);
   }
 }
 
@@ -2283,6 +2392,11 @@ void MainComponent::loadMidiFile(juce::File f) {
     lastProcessedBeat = -1.0;
     trackGrid.loadSequence(playbackSeq);
     trackGrid.setTicksPerQuarter(ticksPerQuarterNote);
+
+    if (mixer.isResetOnLoad) {
+      mixer.resetMapping();
+    }
+
     logPanel.log("! Loaded File: " + f.getFileName(), true);
     playlist.addFile(f.getFullPathName());
     grabKeyboardFocus();

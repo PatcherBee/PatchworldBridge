@@ -164,6 +164,17 @@ public:
     }
   }
 
+  bool isResetOnLoad = true;
+
+  void resetMapping() {
+    for (int i = 0; i < 16; ++i) {
+      channelMapping[i] = i;
+    }
+    removeAllStrips();
+    if (auto *p = getParentComponent())
+      p->repaint();
+  }
+
   void updateSoloStates() {
     bool anySolo = false;
     for (auto *s : strips) {

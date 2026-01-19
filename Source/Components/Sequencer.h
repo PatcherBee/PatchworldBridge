@@ -24,6 +24,7 @@ public:
   juce::ComboBox cmbSteps;
   juce::ComboBox cmbSeqChannel; // New Output Channel selection
   int outputChannel = 1;
+  juce::TextButton btnResetCH{"Reset CH"};
 
   juce::Label lblTitle{{}, "Sequencer"};
   juce::OwnedArray<juce::ToggleButton> stepButtons;
@@ -94,6 +95,11 @@ public:
 
     btnClear.onClick = [this] { clearSteps(); };
     addAndMakeVisible(btnClear);
+
+    btnResetCH.setTooltip("Reset Mixer Channel Mapping");
+    btnResetCH.setColour(juce::TextButton::buttonColourId,
+                         juce::Colours::darkred.withAlpha(0.5f));
+    addAndMakeVisible(btnResetCH);
   }
 
   void addTrack(int ch, int prog, juce::String name) {
@@ -155,6 +161,10 @@ public:
         stepButtons[i]->setBounds(i * sw, r.getY(), sw, r.getHeight() - 10);
       }
     }
+
+    // Reset CH button - Very small, bottom right
+    btnResetCH.setBounds(
+        getLocalBounds().removeFromRight(50).removeFromBottom(15).reduced(2));
   }
 
   void paint(juce::Graphics &g) override {
