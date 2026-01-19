@@ -22,6 +22,9 @@ public:
   int activeRollDiv = 0;
   juce::Slider noteSlider;
   juce::ComboBox cmbSteps;
+  juce::ComboBox cmbSeqChannel; // New Output Channel selection
+  int outputChannel = 1;
+
   juce::Label lblTitle{{}, "Sequencer"};
   juce::OwnedArray<juce::ToggleButton> stepButtons;
   int numSteps = 16, currentStep = -1;
@@ -30,6 +33,11 @@ public:
   enum Mode { Time, Loop, Roll };
   Mode currentMode = Mode::Time;
   juce::ComboBox cmbMode;
+
+  // Roll/Loop State
+  double rollCaptureBeat = 0.0;
+  bool isRollActive = false;
+  int lastRollFiredStep = -1;
 
   StepSequencer() {
     addAndMakeVisible(lblTitle);
@@ -49,6 +57,15 @@ public:
     currentMode = Mode::Loop;
     cmbMode.onChange = [this] {
       currentMode = (Mode)(cmbMode.getSelectedId() - 1);
+    };
+
+    // Output Channel Dropdown
+    addAndMakeVisible(cmbSeqChannel);
+    for (int i = 1; i <= 16; ++i)
+      cmbSeqChannel.addItem(juce::String(i), i);
+    cmbSeqChannel.setSelectedId(1, juce::dontSendNotification);
+    cmbSeqChannel.onChange = [this] {
+      outputChannel = cmbSeqChannel.getSelectedId();
     };
 
     noteSlider.setSliderStyle(juce::Slider::LinearBar);
@@ -112,12 +129,15 @@ public:
   void resized() override {
     auto r = getLocalBounds().reduced(2);
     auto header = r.removeFromTop(30);
-    lblTitle.setBounds(header.removeFromLeft(80));
-    cmbSteps.setBounds(header.removeFromLeft(60));
+    lblTitle.setBounds(header.removeFromLeft(70));
+    cmbSteps.setBounds(header.removeFromLeft(50));
     cmbMode.setBounds(
-        header.removeFromLeft(80).reduced(5, 0)); // Added Mode Menu
-    btnClear.setBounds(header.removeFromRight(60).reduced(2));
-    noteSlider.setBounds(header.removeFromRight(80).reduced(2, 0));
+        header.removeFromLeft(70).reduced(5, 0)); // Added Mode Menu
+
+    btnClear.setBounds(header.removeFromRight(50).reduced(2));
+    noteSlider.setBounds(header.removeFromRight(50).reduced(2, 0));
+    cmbSeqChannel.setBounds(
+        header.removeFromRight(50).reduced(2, 0)); // Left of Note Slider
 
     auto rollRow = r.removeFromTop(25);
     int rw = rollRow.getWidth() / 4;

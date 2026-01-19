@@ -58,6 +58,9 @@ MainComponent::MainComponent()
     link->commitAppSessionState(state);
   }
 
+  // --- OpenGL Init ---
+  openGLContext.attachTo(*this);
+
   // --- Logo ---
   if (BinaryData::logo_pngSize > 0) {
     auto myImage = juce::ImageCache::getFromMemory(BinaryData::logo_png,
@@ -92,6 +95,25 @@ MainComponent::MainComponent()
   addAndMakeVisible(lblNoteDelay);
   lblNoteDelay.setText("Duration:", juce::dontSendNotification);
   lblNoteDelay.setJustificationType(juce::Justification::centredRight);
+
+  // --- Latency Comp Slider (Help/Control) ---
+  addChildComponent(
+      sliderLatencyComp); // Not always visible, maybe in Control Page?
+  sliderLatencyComp.setRange(0.0, 200.0, 1.0);
+  sliderLatencyComp.setValue(20.0); // Default
+  sliderLatencyComp.setSliderStyle(juce::Slider::LinearHorizontal);
+  sliderLatencyComp.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 40, 15);
+  sliderLatencyComp.setTooltip("Lookahead Latency Compensation (ms)");
+
+  addChildComponent(lblLatencyComp);
+  lblLatencyComp.setText("Latency Comp (ms):", juce::dontSendNotification);
+
+  controlPage.addAndMakeVisible(sliderLatencyComp); // Add to Control Page
+  controlPage.addAndMakeVisible(lblLatencyComp);
+  // Manual toggle of visibility in resized or controlPage logic needed if not
+  // using child components directly For now, MainComponent owns them, we just
+  // place them in Control Page area in resized()
+
   transportStartBeat = 0.0;
 
   // --- Group Headers ---
@@ -735,6 +757,7 @@ MainComponent::MainComponent()
 
   // --- Components Add ---
   trackGrid.setKeyboardComponent(&horizontalKeyboard);
+  trackGrid.wheelStripWidth = 50; // Align with Keyboard's wheel offset
   addAndMakeVisible(trackGrid);
   addAndMakeVisible(horizontalKeyboard);
   addAndMakeVisible(verticalKeyboard);
@@ -1071,9 +1094,8 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
       } else {
         keyboardState.noteOn(i, note, vel);
         double durationMs = this->getDurationFromVelocity(vel);
-        juce::ScopedLock sl(midiLock);
-        scheduledNotes.push_back(
-            {i, note, juce::Time::getMillisecondCounterHiRes() + durationMs});
+        midiScheduler.scheduleNoteOff(
+            i, note, juce::Time::getMillisecondCounterHiRes() + durationMs);
       }
       isHandlingOsc = false;
       return;
@@ -1286,28 +1308,19 @@ void MainComponent::hiResTimerCallback() {
 
   // --- PROCESS SCHEDULED NOTE OFFS ---
   {
-    juce::ScopedLock sl(midiLock);
-    for (auto it = scheduledNotes.begin(); it != scheduledNotes.end();) {
-      if (nowMs >= it->releaseTimeMs) {
-        // keyboardState.noteOff triggers handleNoteOff listener,
-        // which handles both OSC logging and MIDI Hardware Out.
-        isHandlingOsc = true;
-        keyboardState.noteOff(it->channel, it->note, 0.0f);
-        isHandlingOsc = false;
-
-        it = scheduledNotes.erase(it);
-      } else {
-        ++it;
-      }
+    auto dueNotes = midiScheduler.processDueNotes(nowMs);
+    for (auto &n : dueNotes) {
+      isHandlingOsc = true;
+      keyboardState.noteOff(n.channel, n.note, 0.0f);
+      isHandlingOsc = false;
     }
   }
 
-  for (auto it = activeVirtualNotes.begin(); it != activeVirtualNotes.end();) {
-    if (nowMs >= it->releaseTime) {
-      keyboardState.noteOff(it->channel, it->note, 0.0f);
-      it = activeVirtualNotes.erase(it);
-    } else {
-      ++it;
+  // Virtual Notes
+  {
+    auto dueVirtual = midiScheduler.processDueVirtualNotes(nowMs);
+    for (auto &n : dueVirtual) {
+      keyboardState.noteOff(n.channel, n.note, 0.0f);
     }
   }
 
@@ -1376,8 +1389,7 @@ void MainComponent::hiResTimerCallback() {
       if (midiOutput && !btnBlockMidiOut.getToggleState())
         midiOutput->sendMessageNow(m);
 
-      juce::ScopedLock sl(midiLock);
-      scheduledNotes.push_back({ch, note, nowMs + (arpIntervalMs * 0.8)});
+      midiScheduler.scheduleNoteOff(ch, note, nowMs + (arpIntervalMs * 0.8));
     }
   }
 
@@ -1385,11 +1397,11 @@ void MainComponent::hiResTimerCallback() {
   double quantum = 4.0;
   double currentBeat = 0.0;
   bool isLinkEnabled = (link && link->isEnabled());
+  auto now = link->clock().micros(); // Current US time
 
   // Calculate Beat Position
   if (isLinkEnabled) {
     auto session = link->captureAppSessionState();
-    auto now = link->clock().micros();
     currentBeat = session.beatAtTime(now, quantum);
 
     if (isPlaying) {
@@ -1402,15 +1414,16 @@ void MainComponent::hiResTimerCallback() {
           lastProcessedBeat = -1.0;
           playbackCursor = 0;
           pendingSyncStart = false;
+          // Ensure Link Transport is Playing
           if (!session.isPlaying()) {
-            session.setIsPlayingAndRequestBeatAtTime(true, now, currentBeat,
-                                                     quantum);
+            session.setIsPlaying(true, now); // Just set playing, beat is auto
             link->commitAppSessionState(session);
           }
+          // Fire Start/Continue MIDI
           if (isOscConnected)
             oscSender.send(oscConfig.ePlay.getText(), 1.0f);
           if (midiOutput && btnMidiClock.getToggleState())
-            midiOutput->sendMessageNow(juce::MidiMessage(0xFA)); // Start
+            midiOutput->sendMessageNow(juce::MidiMessage(0xFA));
         } else {
           return; // Waiting for sync
         }
@@ -1426,7 +1439,7 @@ void MainComponent::hiResTimerCallback() {
         if (isOscConnected)
           oscSender.send(oscConfig.ePlay.getText(), 1.0f);
         if (midiOutput && btnMidiClock.getToggleState())
-          midiOutput->sendMessageNow(juce::MidiMessage(0xFA)); // Start
+          midiOutput->sendMessageNow(juce::MidiMessage(0xFA));
       }
       double elapsedMs = nowMs - internalPlaybackStartTimeMs;
       double currentBpm = bpmVal.get();
@@ -1441,159 +1454,113 @@ void MainComponent::hiResTimerCallback() {
 
   // --- ALWAYS UPDATE PLAYHEAD & SEQUENCER IF PLAYBACK IS RUNNING ---
   if (isPlaying) {
-    // Wait for Link Sync if pending
-    if (pendingSyncStart && isLinkEnabled) {
-      auto session = link->captureAppSessionState();
-      auto now = link->clock().micros();
-      // Start on next beat/bar boundary (or immediately if no peers)
-      bool shouldStart =
-          (link->numPeers() == 0) || (session.phaseAtTime(now, quantum) < 0.05);
-      if (shouldStart) {
-        transportStartBeat = currentBeat - beatsPlayedOnPause;
-        lastProcessedBeat = -1.0;
-        playbackCursor = 0; // Fix: Reset cursor for visual sync
-        pendingSyncStart = false;
-        if (isOscConnected)
-          oscSender.send(oscConfig.ePlay.getText(), 1.0f);
-        if (midiOutput && btnMidiClock.getToggleState())
-          midiOutput->sendMessageNow(juce::MidiMessage(0xFA));
-      } else {
-        return; // Stay in pending state
-      }
-    }
-
-    // Sync the visual grid with internal/link beats
+    // Sync the visual grid
     double pbRelative = currentBeat - transportStartBeat;
     trackGrid.playbackCursor = (float)(pbRelative * ticksPerQuarterNote);
     trackGrid.octaveShift = pianoRollOctaveShift;
 
-    // 1. Sequencer Trigger
-    double beatForSeq = currentBeat;
-    double stepMultiplier = 4.0; // Default 1/16th
+    // --- SEQUENCER PERFORMANCE LOGIC (LOOP / ROLL) ---
+    int currentStepPos = -1;
 
     if (sequencer.activeRollDiv > 0) {
-      if (sequencer.getMode() == StepSequencer::Time) {
-        // Change Speed: 1/4=1x, 1/8=2x, 1/16=4x, 1/32=8x
-        stepMultiplier = (double)sequencer.activeRollDiv / 4.0;
-      } else if (sequencer.getMode() == StepSequencer::Loop) {
-        // Loop/Stutter: constrain beatForSeq to the window of the roll divisor
-        // e.g. if 1/4 (div 4), we loop within the current 1/4 note
-        double loopLen = 4.0 / (double)sequencer.activeRollDiv;
-        // e.g. div 4 -> len 1.0 (1 beat). div 8 -> len 0.5 (1/8th)
-        beatForSeq =
-            std::floor(currentBeat / loopLen) * loopLen + // Base of window
-            std::fmod(currentBeat, loopLen);              // Local phase
-
-        // Actually, pure fmod is better for "Stuttering the CURRENT window":
-        // We want to lock it to the "start" of the roll press?
-        // Simpler approach: modulo the beat time.
-        // beatForSeq = std::floor(transportStartBeat) + std::fmod(currentBeat,
-        // loopLen); Let's stick to simple beat wrapping for now:
-        beatForSeq = std::fmod(currentBeat, loopLen * sequencer.numSteps / 4.0);
-        // Wait, "Loop" often means "Repeating the segment".
-        // Let's implement a simple "Repeat the last 1/X interval" effect.
-        // If I hold 1/4, it repeats the current quarter note.
-        beatForSeq =
-            (double)((int)(currentBeat * (double)sequencer.activeRollDiv /
-                           4.0)) /
-                ((double)sequencer.activeRollDiv / 4.0) +
-            std::fmod(currentBeat, 4.0 / (double)sequencer.activeRollDiv);
+      // Capture the start of the roll/loop if we just started pressing
+      if (!sequencer.isRollActive) {
+        sequencer.rollCaptureBeat = currentBeat;
+        sequencer.isRollActive = true;
       }
+
+      double loopLengthBeats =
+          4.0 / (double)sequencer.activeRollDiv; // e.g., 1/16 = 0.25 beats
+
+      // LOOP MODE: Wraps the playback position within the capture window
+      if (sequencer.getMode() == StepSequencer::Loop) {
+        // Calculate a "local" beat that never leaves the 1/X window
+        double offset =
+            std::fmod(currentBeat - sequencer.rollCaptureBeat, loopLengthBeats);
+        double effectiveBeat = sequencer.rollCaptureBeat + offset;
+
+        // Map this effective beat to the sequencer steps (assuming 4 steps per
+        // beat = 1/16th grid)
+        currentStepPos = (int)(effectiveBeat * 4.0) % sequencer.numSteps;
+      }
+      // ROLL MODE: Stays on the master timeline but "ratchets" (multi-fires)
+      // the note
+      else if (sequencer.getMode() == StepSequencer::Roll) {
+        currentStepPos = (int)(currentBeat * 4.0) % sequencer.numSteps;
+
+        // If current step is active, check if we need to fire a sub-tick note
+        if (sequencer.isStepActive(currentStepPos)) {
+          // Check phase within the 1/X divisor
+          double rollPhase = std::fmod(currentBeat, loopLengthBeats);
+
+          // Fire if we just crossed the start of a new roll-pulse
+          // Using a small window here. Better might be to track last fired
+          // sub-step. Or compare integer index of sub-steps.
+          int currentRollSubStep = (int)(currentBeat / loopLengthBeats);
+
+          if (currentRollSubStep != sequencer.lastRollFiredStep) {
+            // Fire Note!
+            sequencer.lastRollFiredStep = currentRollSubStep;
+            // We need to trigger the note below, so we set currentStepPos and
+            // let the localized trigger handle it? BUT, the trigger below logic
+            // checks (currentStepPos != sequencer.currentStep). Since Roll
+            // stays on the same step, we need to force fire here.
+
+            int note = (int)sequencer.noteSlider.getValue();
+            int ch = sequencer.outputChannel; // Use dynamic channel
+
+            // Latency Comp Calculation (Slider controlled)
+            double latencyCompLines = sliderLatencyComp.getValue();
+            double triggerTime = nowMs + latencyCompLines;
+
+            // Verify Mixer Status
+            if (mixer.isChannelActive(ch)) {
+              keyboardState.noteOn(ch, note, 1.0f);
+              midiScheduler.scheduleNoteOff(ch, note, triggerTime + 100.0);
+
+              if (!isHandlingOsc) {
+                sendSplitOscMessage(juce::MidiMessage::noteOn(ch, note, 1.0f),
+                                    ch);
+                if (midiOutput && !btnBlockMidiOut.getToggleState())
+                  midiOutput->sendMessageNow(
+                      juce::MidiMessage::noteOn(ch, note, 1.0f));
+              }
+            }
+          }
+        }
+      }
+    } else {
+      sequencer.isRollActive = false; // Reset state when button is released
+      sequencer.lastRollFiredStep = -1;
+      currentStepPos = (int)(currentBeat * 4.0) % sequencer.numSteps;
     }
 
-    // Recalculate based on mode
-    int currentStepPos =
-        (int)(beatForSeq * stepMultiplier) % sequencer.numSteps;
-
-    // ROLL MODE: Retrigger logic
-    bool scaleRoll = (sequencer.getMode() == StepSequencer::Roll &&
-                      sequencer.activeRollDiv > 0);
-
-    if (scaleRoll) {
-      // Calculation for Roll Sub-steps
-      double rollRate =
-          (double)sequencer.activeRollDiv / 4.0; // e.g. 32 -> 8x speed (1/32)
-      int rollSubStep = (int)(currentBeat * rollRate * 4.0) % 2;
-      // Just simple ratchet: fire if we are crossing a sub-threshold
-      // Or simpler: The sequencer step stays same (Time is normal 1/16), but we
-      // re-fire.
-
-      currentStepPos =
-          (int)(currentBeat * 4.0) %
-          sequencer.numSteps; // Force normal time for Roll background
-      // If active step, we check roll pulse
-      if (sequencer.isStepActive(currentStepPos)) {
-        // Check for sub-tick
-        double subTick =
-            std::fmod(currentBeat * 4.0, 4.0 / (double)sequencer.activeRollDiv);
-        // Too complex for reliable timing in this callback without state.
-        // Alternative: Use a fast Pulse based on system time?
-      }
-    }
-
-    // Simplified Logic for Reliability:
-    // TIME: speeds up/slows down the head.
-    // LOOP: Jumps head back.
-    // ROLL: rapid fire.
-
-    if (sequencer.activeRollDiv > 0) {
-      if (sequencer.getMode() == StepSequencer::Time) {
-        stepMultiplier = (double)sequencer.activeRollDiv / 4.0;
-        currentStepPos =
-            (int)(currentBeat * stepMultiplier) % sequencer.numSteps;
-      } else if (sequencer.getMode() == StepSequencer::Loop) {
-        // LOOP MODE: Repeat the segment.
-        // If I press 1/4 (Div 4), I want to loop the current 1/4 note.
-        // Segment Length = 4.0 / activeRollDiv.
-        double loopLen = 4.0 / (double)sequencer.activeRollDiv;
-
-        // Calculate the "Start Beat" of the current segment locally
-        // We want to lock to the grid.
-        // If currentBeat is 1.25 and I press 1/4 (len 1.0), I want to
-        // repeat 1.0-2.0? Or repeat 1.0-1.25 forever? Usually "Beat Repeat"
-        // repeats the *last* captured buffer or the *current* grid segment.
-        // Let's loop the *current grid segment*.
-        double segmentStart = std::floor(currentBeat / loopLen) * loopLen;
-
-        // The "effective" beat for the sequencer should loop within
-        // [segmentStart, segmentStart + loopLen] But simpler: just modulo the
-        // time? If we just mod, we look at the beginning of the sequence. We
-        // need to wrap `currentBeat` relative to `segmentStart`.
-
-        // Wait, if I am at beat 14.5 and press Loop 1/4.
-        // I want to hear 14.0 -> 15.0 repeating?
-        // Or just 14.0->14.25?
-
-        // Let's implement: Loop the current step-window.
-        // currentStepPos = (int)(segmentStart + std::fmod(currentBeat,
-        // loopLen)) ...
-
-        // Let's try:
-        beatForSeq = segmentStart + std::fmod(currentBeat, loopLen);
-        currentStepPos = (int)(beatForSeq * 4.0) % sequencer.numSteps;
-      }
-    }
-
+    // Standard Grid Trigger (Only if Step Changed)
     if (currentStepPos != sequencer.currentStep) {
       sequencer.setActiveStep(currentStepPos);
       if (sequencer.isStepActive(currentStepPos)) {
-        int note = (int)sequencer.noteSlider.getValue();
+        // Don't double fire if Roll is active (Roll handles its own firing)
+        if (sequencer.activeRollDiv == 0 ||
+            sequencer.getMode() != StepSequencer::Roll) {
+          int note = (int)sequencer.noteSlider.getValue();
+          int ch = sequencer.outputChannel;
 
-        // ROLL MODE HANDLING: Burst fire?
-        // Since we are in hiResTimer, we might miss 1/32 notes if we only fire
-        // on step change. But for 1/16 base step, we fire once.
+          // Latency Comp
+          double latencyComp = sliderLatencyComp.getValue(); // ms
+          double triggerTime = nowMs + latencyComp;
 
-        // Standard Fire
-        keyboardState.noteOn(1, note, 1.0f);
-        juce::ScopedLock sl(midiLock);
-        scheduledNotes.push_back({1, note, nowMs + 100.0});
+          if (mixer.isChannelActive(ch)) {
+            keyboardState.noteOn(ch, note, 1.0f);
+            midiScheduler.scheduleNoteOff(ch, note, triggerTime + 100.0);
 
-        // Send to OSC/MIDI
-        if (!isHandlingOsc) {
-          sendSplitOscMessage(juce::MidiMessage::noteOn(1, note, 1.0f));
-          if (midiOutput && !btnBlockMidiOut.getToggleState())
-            midiOutput->sendMessageNow(
-                juce::MidiMessage::noteOn(1, note, 1.0f));
+            if (!isHandlingOsc) {
+              sendSplitOscMessage(juce::MidiMessage::noteOn(ch, note, 1.0f),
+                                  ch);
+              if (midiOutput && !btnBlockMidiOut.getToggleState())
+                midiOutput->sendMessageNow(
+                    juce::MidiMessage::noteOn(ch, note, 1.0f));
+            }
+          }
         }
       }
     }
@@ -1617,7 +1584,7 @@ void MainComponent::hiResTimerCallback() {
           lastRollTime = nowMs;
           int note = (int)sequencer.noteSlider.getValue();
           keyboardState.noteOn(1, note, 1.0f);
-          scheduledNotes.push_back({1, note, nowMs + (rollInterval * 0.5)});
+          midiScheduler.scheduleNoteOff(1, note, nowMs + (rollInterval * 0.5));
           if (!isHandlingOsc) {
             sendSplitOscMessage(juce::MidiMessage::noteOn(1, note, 1.0f));
             if (midiOutput && !btnBlockMidiOut.getToggleState())
@@ -2168,14 +2135,26 @@ void MainComponent::resized() {
                            center.getHeight() - 80);
 
   trackGrid.setBounds(center);
+
+  // --- Overlays ---
+  oscViewport.setBounds(getLocalBounds().reduced(20));
+  helpViewport.setBounds(getLocalBounds().reduced(20));
+  controlPage.setBounds(getLocalBounds().reduced(20));
+
+  if (controlPage.isVisible()) {
+    // Manual layout for Control Page children if ControlPage doesn't have a
+    // Layout
+    lblLatencyComp.setBounds(20, 20, 120, 20);
+    sliderLatencyComp.setBounds(150, 20, 200, 20);
+  }
 }
 
-void MainComponent::handleIncomingMidiMessage(juce::MidiInput *,
+void MainComponent::handleIncomingMidiMessage(juce::MidiInput *source,
                                               const juce::MidiMessage &m) {
   // 1. Pass Notes to Keyboard State for Visuals
   if (m.isNoteOnOrOff()) {
-    isHandlingOsc = true; // Use flag to prevent handleNoteOn from echoing back
-                          // to the same hardware
+    isHandlingOsc = true; // Use flag to prevent handleNoteOn from echoing
+                          // back to the same hardware
     keyboardState.processNextMidiEvent(m);
     isHandlingOsc = false;
 
@@ -2328,8 +2307,7 @@ void MainComponent::sendPanic() {
   keyboardState.allNotesOff(getSelectedChannel());
   heldNotes.clear();
   noteArrivalOrder.clear();
-  activeVirtualNotes.clear();
-  scheduledNotes.clear();
+  midiScheduler.clear();
   juce::MessageManager::callAsync([this] {
     verticalKeyboard.repaint();
     horizontalKeyboard.repaint();

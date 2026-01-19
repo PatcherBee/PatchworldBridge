@@ -16,10 +16,12 @@ public:
     juce::Slider volSlider;
     juce::TextEditor nameLabel;
     juce::ToggleButton btnActive;
+    juce::ToggleButton btnSolo; // New Solo Button
     int channelIndex;
     int visualIndex; // For display order
     std::function<void(int, float)> onLevelChange;
     std::function<void(int, bool)> onActiveChange;
+    std::function<void()> onSoloChange; // New callback
 
     MixerStrip(int i) : channelIndex(i), visualIndex(i) {
       volSlider.setSliderStyle(juce::Slider::LinearVertical);
@@ -45,6 +47,17 @@ public:
         repaint();
       };
       addAndMakeVisible(btnActive);
+
+      // Solo Button Init
+      btnSolo.setButtonText("S");
+      btnSolo.setColour(juce::ToggleButton::tickColourId,
+                        juce::Colours::yellow);
+      btnSolo.onClick = [this] {
+        if (onSoloChange)
+          onSoloChange();
+        repaint();
+      };
+      addAndMakeVisible(btnSolo);
 
       trackLabel.setFont(juce::FontOptions(10.0f));
       trackLabel.setJustificationType(juce::Justification::centred);
@@ -90,13 +103,14 @@ public:
       auto r = getLocalBounds().reduced(2);
       g.setColour(Theme::bgPanel);
       g.fillRoundedRectangle(r.toFloat(), 4.0f);
-      if (btnActive.getToggleState()) {
-        g.setColour(Theme::getChannelColor(channelIndex + 1).withAlpha(0.2f));
-        g.fillRoundedRectangle(r.toFloat(), 4.0f);
-      } else {
-        g.setColour(juce::Colours::red.withAlpha(0.1f)); // Mute visual
+
+      // Visual feedback for Muted state (due to other solo)
+      // Managed by MixerContainer logic, but we can visualize enabled state
+      if (!btnActive.getToggleState()) {
+        g.setColour(juce::Colours::red.withAlpha(0.1f));
         g.fillRoundedRectangle(r.toFloat(), 4.0f);
       }
+
       float level = (float)volSlider.getValue() / 127.0f;
       int h = (int)((volSlider.getHeight()) * level);
       g.setColour(Theme::getChannelColor(channelIndex + 1).withAlpha(0.5f));
@@ -115,7 +129,12 @@ public:
     }
     void resized() override {
       trackLabel.setBounds(0, 0, getWidth(), 14);
-      btnActive.setBounds(0, 15, getWidth(), 15);
+
+      // Split button area
+      auto btnArea = juce::Rectangle<int>(0, 15, getWidth(), 15);
+      btnActive.setBounds(btnArea.removeFromLeft(getWidth() / 2));
+      btnSolo.setBounds(btnArea);
+
       nameLabel.setBounds(0, getHeight() - 20, getWidth(), 20);
       volSlider.setBounds(0, 32, getWidth(), getHeight() - 52);
     }
@@ -140,8 +159,25 @@ public:
         if (onChannelToggle)
           onChannelToggle(ch, active);
       };
+      s->onSoloChange = [this] { updateSoloStates(); };
       addAndMakeVisible(s);
     }
+  }
+
+  void updateSoloStates() {
+    bool anySolo = false;
+    for (auto *s : strips) {
+      if (s->btnSolo.getToggleState()) {
+        anySolo = true;
+        break;
+      }
+    }
+
+    // If any solo is active, only soloed tracks are audible
+    // If no solo is active, use the Mute (Active) button state
+    // We don't change the actual ON/OFF toggle state, but we might need to
+    // expose "isAudible" However, usually Mixer logic queries
+    // "isChannelActive". Let's update that logic.
   }
 
   int getMappedChannel(int sourceCh) {
@@ -169,20 +205,52 @@ public:
       resized();
       if (auto *p = getParentComponent())
         p->repaint();
+
+      // Notify parent if needed, MainComponent matches Mixer logic by calling
+      // getMappedChannel
     }
   }
 
   bool isChannelActive(int ch) {
-    if (isPositiveAndBelow(ch - 1, strips.size()))
-      return strips[ch - 1]->btnActive.getToggleState();
-    return true;
+    // ch is 1-based channel number (1-16)
+    // Find the strip that handles this channel
+    // Because strips are swapped visually, we need to find the one with
+    // channelIndex == ch-1
+    MixerStrip *target = nullptr;
+    for (auto *s : strips) {
+      if (s->channelIndex == ch - 1) {
+        target = s;
+        break;
+      }
+    }
+
+    if (!target)
+      return true;
+
+    // Check Solo State Global
+    bool anySolo = false;
+    for (auto *s : strips) {
+      if (s->btnSolo.getToggleState()) {
+        anySolo = true;
+        break;
+      }
+    }
+
+    if (anySolo) {
+      return target->btnSolo.getToggleState();
+    } else {
+      return target->btnActive.getToggleState();
+    }
   }
 
   juce::String getChannelName(int ch) {
     if (ch < 1 || ch > 16)
       return juce::String(ch);
-    if (isPositiveAndBelow(ch - 1, strips.size()))
-      return strips[ch - 1]->nameLabel.getText();
+    // Find strip for this channel
+    for (auto *s : strips) {
+      if (s->channelIndex == ch - 1)
+        return s->nameLabel.getText();
+    }
     return juce::String(ch);
   }
 
@@ -198,6 +266,7 @@ public:
         if (onChannelToggle)
           onChannelToggle(ch, active);
       };
+      s->onSoloChange = [this] { updateSoloStates(); };
       addAndMakeVisible(s);
     }
     resized();

@@ -83,14 +83,13 @@ public:
     // Helper to get X position and Width
     auto getKeyRect = [&](int note) -> juce::Rectangle<float> {
       if (keyboardComp) {
-        // Map 0-127 in PR to keyboard range
-        // Keyboard might be shifted? Usually it shows full range if scrolled?
-        // MidiKeyboardComponent handles scrolling internally, but we set it to
-        // view range usually. Our PR draws ALL notes? Or visible ones? PR
-        // usually matches keyboard. getRectangleForKey returns coords relative
-        // to keyboard. We assume PR and Keyboard are aligned horizontally
-        // (share width).
-        return keyboardComp->getRectangleForKey(note);
+        // Keyboard is offset by wheelStripWidth relative to this component
+        // (trackGrid) trackGrid = (X=0, W=800), Keyboard = (X=50, W=750)
+        // keyboardComp->getRectangleForKey returns X relative to Keyboard
+        // (0..750) We need to draw at X + wheelStripWidth to align (because we
+        // start at 0)
+        auto r = keyboardComp->getRectangleForKey(note);
+        return r.withX(r.getX() + (float)wheelStripWidth);
       }
       // Fallback
       float availableW = (float)(w - wheelStripWidth);

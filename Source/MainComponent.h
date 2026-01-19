@@ -11,11 +11,13 @@
 
 // Use flat includes if files are in the same directory
 #include "Common.h"
+#include "Components/MidiScheduler.h"
 #include "Controls.h"
 #include "Mixer.h"
 #include "Sequencer.h"
 #include "SubComponents.h"
 #include "Tools.h"
+
 
 class MainComponent : public juce::AudioAppComponent,
                       public juce::Timer,
@@ -109,7 +111,8 @@ private:
 
   // Controls
   juce::Slider vol1Simple, vol2Simple, tempoSlider, nudgeSlider,
-      sliderNoteDelay, sliderArpSpeed, sliderArpVel;
+      sliderNoteDelay, sliderArpSpeed, sliderArpVel, sliderLatencyComp;
+  juce::Label lblLatencyComp;
   juce::Slider sliderPitchH, sliderModH, sliderPitchV, sliderModV;
   juce::TextEditor txtVol1Osc, txtVol2Osc, edIp, edPOut, edPIn;
   juce::TextButton btnVol1CC, btnVol2CC, btnLinkToggle, btnTapTempo, btnPanic,
@@ -174,19 +177,7 @@ private:
   int currentArpIndex = 0;
   int lastReceivedCC[17] = {0}; // Track last CC for /chXcv
 
-  // Structs for Note Scheduling
-  struct ScheduledNote {
-    int channel;
-    int note;
-    double releaseTimeMs;
-  };
-  std::vector<ScheduledNote> scheduledNotes;
-  struct VirtualNote {
-    int channel;
-    int note;
-    double releaseTime;
-  };
-  std::vector<VirtualNote> activeVirtualNotes;
+  MidiScheduler midiScheduler;
   std::vector<int> noteArrivalOrder;
   juce::Array<int> heldNotes;
 
