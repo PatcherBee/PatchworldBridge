@@ -12,6 +12,8 @@
         <FILE id="ZyTVQb" name="Tools.h" compile="0" resource="0" file="Source/Components/Tools.h"/>
       </GROUP>
       <FILE id="p6A9ua" name="logo.png" compile="0" resource="1" file="logo.png"/>
+      <FILE id="TvI7eR" name="ControlProfile.h" compile="0" resource="0"
+            file="Source/ControlProfile.h"/>
       <FILE id="HUXqul" name="SubComponents.h" compile="0" resource="0" file="Source/SubComponents.h"/>
       <FILE id="Ej6Amu" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="tkXB53" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>

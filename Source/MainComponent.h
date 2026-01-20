@@ -6,17 +6,19 @@
 */
 #pragma once
 
+#include "ControlProfile.h"
 #include <JuceHeader.h>
 #include <ableton/Link.hpp>
 
 // Use flat includes if files are in the same directory
 #include "Common.h"
+#include "Components/Controls.h"
 #include "Components/MidiScheduler.h"
-#include "Controls.h"
-#include "Mixer.h"
-#include "Sequencer.h"
+#include "Components/Mixer.h"
+#include "Components/Sequencer.h"
+#include "Components/Tools.h"
 #include "SubComponents.h"
-#include "Tools.h"
+
 
 class MainComponent : public juce::AudioAppComponent,
                       public juce::Timer,
@@ -183,7 +185,7 @@ private:
 
   // ComboBoxes
   juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern,
-      cmbClockMode;
+      cmbClockMode, cmbTheme, cmbControlProfile;
   juce::Slider sliderClockOffset; // For manual offset
   juce::Label lblClockOffset;
 
@@ -192,6 +194,14 @@ private:
 
   enum class AppView { Dashboard, Control, OSC_Config, Help };
   AppView currentView = AppView::Dashboard;
+
+  ControlProfile currentProfile;
+  void applyControlProfile(const ControlProfile &p);
+
+  // Profile Management
+  void updateProfileComboBox();
+  void loadCustomProfile(juce::File f);
+  juce::File getProfileDirectory();
 
   // Private Helper Methods
   void setView(AppView v);

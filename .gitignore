@@ -1,5 +1,6 @@
 # --- CMake / Build Output ---
 build/
+Builds/
 bin/
 cmake-build-debug/
 cmake-build-release/
@@ -9,6 +10,7 @@ CMakeCache.txt
 _CPack_Packages/
 CPackConfig.cmake
 CPackSourceConfig.cmake
+
 
 build_debug/
 build_final/

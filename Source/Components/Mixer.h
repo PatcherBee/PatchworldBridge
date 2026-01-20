@@ -265,6 +265,15 @@ public:
     return juce::String(ch);
   }
 
+  void setChannelVolume(int ch, float val) {
+    for (auto *s : strips) {
+      if (s->channelIndex == ch - 1) {
+        s->volSlider.setValue(val, juce::dontSendNotification);
+        return;
+      }
+    }
+  }
+
   void removeAllStrips() {
     strips.clear();
     for (int i = 0; i < 16; ++i) {

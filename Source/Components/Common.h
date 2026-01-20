@@ -8,11 +8,11 @@
 #include <cmath>
 
 struct Theme {
-  static const juce::Colour bgDark;
-  static const juce::Colour bgPanel;
-  static const juce::Colour accent;
-  static const juce::Colour grid;
-  static const juce::Colour text;
+  static juce::Colour bgDark;
+  static juce::Colour bgPanel;
+  static juce::Colour accent;
+  static juce::Colour grid;
+  static juce::Colour text;
 
   static juce::Colour getChannelColor(int ch) {
     return juce::Colour::fromHSV(
@@ -20,11 +20,11 @@ struct Theme {
   }
 };
 
-inline const juce::Colour Theme::bgDark = juce::Colour::fromString("FF121212");
-inline const juce::Colour Theme::bgPanel = juce::Colour::fromString("FF1E1E1E");
-inline const juce::Colour Theme::accent = juce::Colour::fromString("FF007ACC");
-inline const juce::Colour Theme::grid = juce::Colour::fromString("FF333333");
-inline const juce::Colour Theme::text = juce::Colours::white;
+inline juce::Colour Theme::bgDark = juce::Colour::fromString("FF121212");
+inline juce::Colour Theme::bgPanel = juce::Colour::fromString("FF1E1E1E");
+inline juce::Colour Theme::accent = juce::Colour::fromString("FF007ACC");
+inline juce::Colour Theme::grid = juce::Colour::fromString("FF333333");
+inline juce::Colour Theme::text = juce::Colours::white;
 
 struct PhaseVisualizer : public juce::Component {
   double currentPhase = 0.0;
