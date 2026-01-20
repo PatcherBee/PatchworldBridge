@@ -1,6 +1,10 @@
-<img width="850" height="230" alt="beebanner1" src="https://github.com/user-attachments/assets/8323c2fa-c26e-480b-8130-da89550ec2ad" />
+<p align="center">
+  <img src="images/beebanner.png" width="800" alt="Patchworld Bridge Banner">
+</p>
 
 🐝🐝🐝 THIS IS AN ALPHA BUILD YOU WILL EXPERIENCE BUGS 🐝🐝🐝
+
+ -Update 2-
 
 🔗 Getting Connected 🔗
 

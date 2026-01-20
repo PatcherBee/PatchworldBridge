@@ -44,12 +44,14 @@ target_sources(PatchworldBridge PRIVATE
     Source/Components/Tools.h
     Source/Components/Sequencer.h
     Source/Components/Mixer.h
-    Source/Components/Controls.h)
+    Source/Components/Controls.h
+    Source/Components/MidiScheduler.h)
 
 # 5. Header Search Paths (Fixes IntelliSense and "File Not Found" errors)
 target_include_directories(PatchworldBridge PRIVATE 
     Source
     Source/Components
+    JuceLibraryCode
 )
 
 # 6. Link Libraries

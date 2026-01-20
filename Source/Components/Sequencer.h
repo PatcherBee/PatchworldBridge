@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     Source/Components/Sequencer.h
-    Status: FIXED (Restored Track Logic for MIDI Files)
+    Status: FIXED (Added missing isStepActive method)
   ==============================================================================
 */
 #pragma once
@@ -10,7 +10,6 @@
 
 class StepSequencer : public juce::Component {
 public:
-  // --- RESTORED TRACK STRUCTURE ---
   struct Track {
     int channel;
     int program;
@@ -23,10 +22,23 @@ public:
   int activeRollDiv = 0;
   juce::Slider noteSlider;
   juce::ComboBox cmbSteps;
+  juce::ComboBox cmbSeqChannel; // New Output Channel selection
+  int outputChannel = 1;
+  juce::TextButton btnResetCH{"Reset CH"};
+
   juce::Label lblTitle{{}, "Sequencer"};
   juce::OwnedArray<juce::ToggleButton> stepButtons;
   int numSteps = 16, currentStep = -1;
   juce::TextButton btnClear{"Clear"};
+
+  enum Mode { Time, Loop, Roll };
+  Mode currentMode = Mode::Time;
+  juce::ComboBox cmbMode;
+
+  // Roll/Loop State
+  double rollCaptureBeat = 0.0;
+  bool isRollActive = false;
+  int lastRollFiredStep = -1;
 
   StepSequencer() {
     addAndMakeVisible(lblTitle);
@@ -39,17 +51,37 @@ public:
       rebuildSteps(cmbSteps.getText().getIntValue());
     };
 
+    addAndMakeVisible(cmbMode);
+    cmbMode.addItemList({"Time", "Loop", "Roll"}, 1);
+    // User requested Loop as default. Index 1=Time, 2=Loop, 3=Roll
+    cmbMode.setSelectedId(2, juce::dontSendNotification);
+    currentMode = Mode::Loop;
+    cmbMode.onChange = [this] {
+      currentMode = (Mode)(cmbMode.getSelectedId() - 1);
+    };
+
+    // Output Channel Dropdown
+    addAndMakeVisible(cmbSeqChannel);
+    for (int i = 1; i <= 16; ++i)
+      cmbSeqChannel.addItem(juce::String(i), i);
+    cmbSeqChannel.setSelectedId(1, juce::dontSendNotification);
+    cmbSeqChannel.onChange = [this] {
+      outputChannel = cmbSeqChannel.getSelectedId();
+    };
+
     noteSlider.setSliderStyle(juce::Slider::LinearBar);
     noteSlider.setRange(0, 127, 1);
     noteSlider.setValue(60);
     addAndMakeVisible(noteSlider);
 
     auto setupRoll = [&](juce::TextButton &b, int div) {
-      b.setClickingTogglesState(true);
-      b.setRadioGroupId(101);
+      b.setClickingTogglesState(false); // Momentary
       b.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
-      b.onClick = [this, &b, div] {
-        activeRollDiv = b.getToggleState() ? div : 0;
+      b.onStateChange = [this, &b, div] {
+        if (b.isMouseButtonDown())
+          activeRollDiv = div;
+        else
+          activeRollDiv = 0;
       };
       addAndMakeVisible(b);
     };
@@ -63,9 +95,13 @@ public:
 
     btnClear.onClick = [this] { clearSteps(); };
     addAndMakeVisible(btnClear);
+
+    btnResetCH.setTooltip("Reset Mixer Channel Mapping");
+    btnResetCH.setColour(juce::TextButton::buttonColourId,
+                         juce::Colours::darkred.withAlpha(0.5f));
+    addAndMakeVisible(btnResetCH);
   }
 
-  // --- RESTORED METHOD ---
   void addTrack(int ch, int prog, juce::String name) {
     activeTracks.push_back({ch, prog, name});
     repaint();
@@ -77,6 +113,7 @@ public:
     for (int i = 0; i < numSteps; ++i) {
       auto *b = stepButtons.add(new juce::ToggleButton());
       b->setColour(juce::ToggleButton::tickColourId, Theme::accent);
+      b->setButtonText(juce::String(i + 1));
       addAndMakeVisible(b);
     }
     resized();
@@ -93,54 +130,45 @@ public:
     return false;
   }
 
+  Mode getMode() const { return currentMode; }
+
   void resized() override {
     auto r = getLocalBounds().reduced(2);
-    auto header = r.removeFromTop(25);
+    auto header = r.removeFromTop(30);
     lblTitle.setBounds(header.removeFromLeft(70));
-    cmbSteps.setBounds(header.removeFromLeft(90)); // Widened
-    // cmbRate removed
-    btnClear.setBounds(header.removeFromRight(60).reduced(2));
+    cmbSteps.setBounds(header.removeFromLeft(50));
+    cmbMode.setBounds(
+        header.removeFromLeft(70).reduced(5, 0)); // Added Mode Menu
 
-    // User requested: "missing the root not slider I askedd for that was there
-    // in last build"
-    noteSlider.setBounds(header.removeFromRight(80).reduced(2, 0));
+    btnClear.setBounds(header.removeFromRight(50).reduced(2));
+    noteSlider.setBounds(header.removeFromRight(50).reduced(2, 0));
+    cmbSeqChannel.setBounds(
+        header.removeFromRight(50).reduced(2, 0)); // Left of Note Slider
 
-    auto rollRow = r.removeFromTop(22);
+    auto rollRow = r.removeFromTop(25);
     int rw = rollRow.getWidth() / 4;
     btnRoll4.setBounds(rollRow.removeFromLeft(rw).reduced(1));
     btnRoll8.setBounds(rollRow.removeFromLeft(rw).reduced(1));
     btnRoll16.setBounds(rollRow.removeFromLeft(rw).reduced(1));
     btnRoll32.setBounds(rollRow.removeFromLeft(rw).reduced(1));
 
-    r.removeFromBottom(35); // Room for track buttons
+    r.removeFromTop(10); // Gap
+
+    // Beat steps - Larger and lower
     if (stepButtons.size() > 0) {
       int sw = r.getWidth() / stepButtons.size();
       for (int i = 0; i < stepButtons.size(); ++i) {
-        auto *b = stepButtons[i];
-        b->setBounds(i * sw, r.getY(), sw, r.getHeight());
-        // Simple visual feedback for "visual beat step indicators"
-        // If currentStep matches i, we could highlight it. But ToggleButton
-        // doesn't support dual state easily without lookandfeel. We will just
-        // rely on standard painting or adding a component behind it? Actually,
-        // let's just use the paint method to draw a highlight since the buttons
-        // effectively cover the area. Wait, buttons consume clicks. Let's make
-        // the buttons transparent? No, they track state. We can draw a border
-        // around the active step in paint(), ensuring buttons are slightly
-        // smaller or transparent? Or just set the toggle state? No, that clears
-        // the sequence. Let's try custom painting in the button? Too complex.
-        // Let's just draw a marker ABOVE the button row or BELOW it.
-        // The user says "missing the visual beat step indicators".
-        // I'll add a 'paintOverChildren' or just draw in paint and make sure
-        // buttons are transparent? Simplest: Draw a rectangle in paint() at the
-        // position of the current step.
+        stepButtons[i]->setBounds(i * sw, r.getY(), sw, r.getHeight() - 10);
       }
     }
+
+    // Reset CH button - Very small, bottom right
+    btnResetCH.setBounds(
+        getLocalBounds().removeFromRight(50).removeFromBottom(15).reduced(2));
   }
 
   void paint(juce::Graphics &g) override {
     g.fillAll(Theme::bgDark);
-
-    // Draw Active Step Highlight over buttons
     if (stepButtons.size() > 0 && currentStep >= 0 &&
         currentStep < stepButtons.size()) {
       auto r = stepButtons[currentStep]->getBounds();
@@ -151,15 +179,12 @@ public:
     }
   }
 
-  // Ensure highlight is visible over buttons
   void paintOverChildren(juce::Graphics &g) override {
     if (stepButtons.size() > 0 && currentStep >= 0 &&
         currentStep < stepButtons.size()) {
       auto r = stepButtons[currentStep]->getBounds();
-      g.setColour(juce::Colours::white.withAlpha(0.4f)); // Increased from 0.2
-      g.fillRect(r);
-      g.setColour(Theme::accent);
-      g.drawRect(r, 2.0f);
+      g.setColour(juce::Colours::white.withAlpha(0.3f));
+      g.fillRect(r.reduced(1));
     }
   }
 

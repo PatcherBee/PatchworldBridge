@@ -5,13 +5,14 @@
 */
 #pragma once
 #include <JuceHeader.h>
+#include <cmath>
 
 struct Theme {
-  static const juce::Colour bgDark;
-  static const juce::Colour bgPanel;
-  static const juce::Colour accent;
-  static const juce::Colour grid;
-  static const juce::Colour text;
+  static juce::Colour bgDark;
+  static juce::Colour bgPanel;
+  static juce::Colour accent;
+  static juce::Colour grid;
+  static juce::Colour text;
 
   static juce::Colour getChannelColor(int ch) {
     return juce::Colour::fromHSV(
@@ -19,11 +20,11 @@ struct Theme {
   }
 };
 
-inline const juce::Colour Theme::bgDark = juce::Colour::fromString("FF121212");
-inline const juce::Colour Theme::bgPanel = juce::Colour::fromString("FF1E1E1E");
-inline const juce::Colour Theme::accent = juce::Colour::fromString("FF007ACC");
-inline const juce::Colour Theme::grid = juce::Colour::fromString("FF333333");
-inline const juce::Colour Theme::text = juce::Colours::white;
+inline juce::Colour Theme::bgDark = juce::Colour::fromString("FF121212");
+inline juce::Colour Theme::bgPanel = juce::Colour::fromString("FF1E1E1E");
+inline juce::Colour Theme::accent = juce::Colour::fromString("FF007ACC");
+inline juce::Colour Theme::grid = juce::Colour::fromString("FF333333");
+inline juce::Colour Theme::text = juce::Colours::white;
 
 struct PhaseVisualizer : public juce::Component {
   double currentPhase = 0.0;
@@ -34,24 +35,35 @@ struct PhaseVisualizer : public juce::Component {
     repaint();
   }
   void paint(juce::Graphics &g) override {
-    auto bounds = getLocalBounds().toFloat();
-    int numBlocks = (int)quantum;
-    if (numBlocks < 1)
-      numBlocks = 1;
-    float blockWidth = (bounds.getWidth() - (numBlocks - 1) * 2.0f) / numBlocks;
-    int activeBlockIndex = (int)std::floor(currentPhase) % numBlocks;
-    for (int i = 0; i < numBlocks; ++i) {
-      auto blockRect =
-          juce::Rectangle<float>(bounds.getX() + i * (blockWidth + 2.0f),
-                                 bounds.getY(), blockWidth, bounds.getHeight());
-      if (i == activeBlockIndex) {
-        g.setColour(Theme::accent);
-        g.fillRoundedRectangle(blockRect, 3.0f);
+    auto bounds = getLocalBounds().toFloat().reduced(2.0f);
+    int numSteps = (int)quantum;
+    if (numSteps < 1)
+      numSteps = 1;
+
+    float spacing = 4.0f;
+    float stepW = (bounds.getWidth() - (numSteps - 1) * spacing) / numSteps;
+    float stepH = bounds.getHeight();
+
+    for (int i = 0; i < numSteps; ++i) {
+      juce::Rectangle<float> rect(bounds.getX() + i * (stepW + spacing),
+                                  bounds.getY(), stepW, stepH);
+      bool isActive = (i == (int)std::floor(currentPhase) % numSteps);
+
+      if (isActive) {
+        // High-gloss active step
+        juce::Colour activeCol = Theme::accent;
+        g.setColour(activeCol);
+        g.fillRoundedRectangle(rect, 4.0f);
+
+        // Inner glow/highlight
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
+        g.fillRoundedRectangle(rect.reduced(stepW * 0.1f, stepH * 0.1f), 2.0f);
       } else {
-        g.setColour(Theme::bgPanel.brighter(0.1f));
-        g.fillRoundedRectangle(blockRect, 3.0f);
-        g.setColour(Theme::grid);
-        g.drawRoundedRectangle(blockRect, 3.0f, 1.0f);
+        // Dim inactive step
+        g.setColour(Theme::bgPanel.brighter(0.05f));
+        g.fillRoundedRectangle(rect, 4.0f);
+        g.setColour(Theme::grid.withAlpha(0.3f));
+        g.drawRoundedRectangle(rect, 4.0f, 1.0f);
       }
     }
   }

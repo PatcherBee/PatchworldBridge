@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     Source/Components/Tools.h
-    Updated: Playlist Label, "!" Log, Stats Logic
+    Status: FIXED (Logging, Playlist, Pause Button)
   ==============================================================================
 */
 #pragma once
@@ -9,19 +9,18 @@
 #include <JuceHeader.h>
 #include <atomic>
 
+// ... PingWorker Class remains same ...
 class PingWorker : public juce::Thread {
 public:
   std::atomic<int> lastPingMs{-1};
   PingWorker() : juce::Thread("PingThread") { startThread(); }
   ~PingWorker() { stopThread(2000); }
-
   void run() override {
     while (!threadShouldExit()) {
       lastPingMs = runPing();
       wait(5000);
     }
   }
-
   int runPing() {
     juce::ChildProcess proc;
     juce::String cmd;
@@ -32,16 +31,12 @@ public:
 #endif
     if (proc.start(cmd)) {
       juce::String output = proc.readAllProcessOutput();
-      // Parse "time=XXms" or "time=XX ms"
-      // Windows: "time=12ms"
-      // Linux: "time=12.3 ms"
       int idx = output.indexOf("time=");
       if (idx > 0) {
         juce::String sub = output.substring(idx + 5);
         int msIdx = sub.indexOf("ms");
-        if (msIdx > 0) {
+        if (msIdx > 0)
           return sub.substring(0, msIdx).getFloatValue();
-        }
       }
     }
     return -1;
@@ -52,7 +47,8 @@ class TrafficMonitor : public juce::Component, public juce::Timer {
 public:
   juce::TextEditor logDisplay;
   juce::Label statsLabel;
-  juce::ToggleButton btnPause{"Pause"};
+  juce::TextButton btnPause; // Changed to TextButton for custom color logic
+  bool isPaused = false;
   juce::TextButton btnClear{"Clear"};
   juce::StringArray messageBuffer;
   int visibleLines = 0;
@@ -66,7 +62,17 @@ public:
     statsLabel.setText("Network: -- | Latency: --", juce::dontSendNotification);
     addAndMakeVisible(statsLabel);
 
-    btnPause.setToggleState(false, juce::dontSendNotification);
+    btnPause.setButtonText("Pause");
+    btnPause.setClickingTogglesState(true);
+    btnPause.setColour(juce::TextButton::buttonOnColourId,
+                       juce::Colours::orange);
+    btnPause.onClick = [this] {
+      isPaused = btnPause.getToggleState();
+      if (isPaused)
+        btnPause.setButtonText("Paused");
+      else
+        btnPause.setButtonText("Pause");
+    };
     addAndMakeVisible(btnPause);
 
     btnClear.onClick = [this] { resetStats(); };
@@ -83,10 +89,9 @@ public:
   }
 
   void log(const juce::String &msg, bool alwaysShow = false) {
-    if (btnPause.getToggleState() && !alwaysShow)
+    if (isPaused && !alwaysShow)
       return;
     juce::ScopedLock sl(logLock);
-    // CHANGED: Use "!" instead of time
     messageBuffer.add("! " + msg);
     if (messageBuffer.size() > 100)
       messageBuffer.remove(0);
@@ -97,9 +102,7 @@ public:
     juce::String sysLat = (getSystemLatency() >= 0)
                               ? (juce::String(getSystemLatency()) + "ms")
                               : "--";
-    // Append System Ping to the Link text passed in
-    statsLabel.setText(text + " | IPv4 Latency: " + sysLat,
-                       juce::dontSendNotification);
+    statsLabel.setText(text + " | " + sysLat, juce::dontSendNotification);
   }
 
   void resetStats() {
@@ -109,7 +112,6 @@ public:
     visibleLines = 0;
   }
 
-  // Custom method to poll ping
   int getSystemLatency() { return pingWorker.lastPingMs; }
 
   void timerCallback() override {
@@ -145,12 +147,10 @@ public:
   juce::ListBox list;
   juce::StringArray files;
   int currentIndex = 0;
-
   enum PlayMode { Single, LoopOne, LoopAll };
   PlayMode playMode = Single;
   juce::TextButton btnLoopMode{"Single"};
   std::function<void(juce::String)> onLoopModeChanged;
-
   juce::TextButton btnClearPlaylist{"Clear"};
   juce::Label lblTitle{{}, "Playlist"};
 
@@ -165,16 +165,11 @@ public:
                           juce::Colours::grey.withAlpha(0.2f));
     btnLoopMode.setColour(juce::TextButton::textColourOffId,
                           juce::Colours::white);
-
-    // Initial Text
     btnLoopMode.setButtonText("Loop Off");
-
     btnLoopMode.onClick = [this] {
       if (playMode == Single) {
         playMode = LoopOne;
         btnLoopMode.setButtonText("Loop One");
-        // User requested: "change the color of 'Loop One' state to a more
-        // appealing color"
         btnLoopMode.setColour(juce::TextButton::buttonColourId,
                               juce::Colours::cyan.darker(0.3f));
         if (onLoopModeChanged)
@@ -197,7 +192,6 @@ public:
     };
     addAndMakeVisible(btnLoopMode);
 
-    // Setup Header Label
     lblTitle.setFont(juce::FontOptions(14.0f).withStyle("Bold"));
     lblTitle.setJustificationType(juce::Justification::centred);
     lblTitle.setColour(juce::Label::textColourId, Theme::accent);
@@ -258,19 +252,16 @@ public:
                juce::Justification::centredLeft, true);
   }
 
-  // Drag & Drop Reordering
   juce::var
   getDragSourceDescription(const juce::SparseSet<int> &selectedRows) override {
     if (selectedRows.size() > 0)
       return "playlist_row_" + juce::String(selectedRows[0]);
     return {};
   }
-
   bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails
                                     &dragSourceDetails) override {
     return dragSourceDetails.description.toString().startsWith("playlist_row_");
   }
-
   void itemDropped(const juce::DragAndDropTarget::SourceDetails
                        &dragSourceDetails) override {
     int sourceIndex = dragSourceDetails.description.toString()
@@ -279,30 +270,24 @@ public:
     int targetIndex = list.getInsertionIndexForPosition(
         dragSourceDetails.localPosition.toInt().x,
         dragSourceDetails.localPosition.toInt().y);
-
     if (sourceIndex >= 0 && sourceIndex < files.size()) {
-      // Adjust target if needed (simple swap or move)
-      // Let's implement move
       if (targetIndex < 0)
         targetIndex = files.size() - 1;
       if (targetIndex > files.size())
         targetIndex = files.size();
-
       juce::String file = files[sourceIndex];
       files.remove(sourceIndex);
       if (targetIndex > sourceIndex)
-        targetIndex--; // Adjust for removal
+        targetIndex--;
       files.insert(targetIndex, file);
-
       if (currentIndex == sourceIndex)
         currentIndex = targetIndex;
       else if (currentIndex > sourceIndex && currentIndex <= targetIndex)
         currentIndex--;
       else if (currentIndex < sourceIndex && currentIndex >= targetIndex)
         currentIndex++;
-
       list.updateContent();
-      list.selectRow(currentIndex); // Keep selection
+      list.selectRow(currentIndex);
       list.repaint();
     }
   }
@@ -310,12 +295,9 @@ public:
   void resized() override {
     auto r = getLocalBounds();
     auto topRow = r.removeFromTop(25);
-
-    // Layout: Loop | Playlist | Clear
     btnLoopMode.setBounds(topRow.removeFromLeft(60));
     btnClearPlaylist.setBounds(topRow.removeFromRight(50).reduced(2));
-    lblTitle.setBounds(topRow); // Centered in remaining space
-
+    lblTitle.setBounds(topRow);
     list.setBounds(r);
   }
 };
