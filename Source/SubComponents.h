@@ -28,6 +28,49 @@ static const float NoteWidthRatios[12] = {
     1.0f  // B
 };
 
+// --- MIDI INDICATOR LIGHT ---
+class MidiIndicator : public juce::Component, public juce::Timer {
+public:
+  MidiIndicator() { startTimerHz(30); } // 30Hz refresh for smoothness
+
+  // Thread-safe activation - Just sets a flag
+  void activate() { triggered.store(true, std::memory_order_relaxed); }
+
+  void paint(juce::Graphics &g) override {
+    auto r = getLocalBounds().reduced(1).toFloat();
+    // Background (dimmed orange or dark)
+    g.setColour(juce::Colours::black.withAlpha(0.4f));
+    g.fillRoundedRectangle(r, 2.0f);
+
+    if (level > 0.01f) {
+      auto color = juce::Colours::orange.withAlpha(level);
+      g.setColour(color);
+      g.fillRoundedRectangle(r, 2.0f);
+
+      // Glow
+      g.setColour(color.withAlpha(level * 0.4f));
+      g.drawRoundedRectangle(r, 2.0f, 1.5f);
+    }
+  }
+
+  void timerCallback() override {
+    if (triggered.exchange(false, std::memory_order_relaxed)) {
+      level = 1.0f;
+    }
+
+    if (level > 0.001f) {
+      level *= 0.8f; // Smoother decay
+      if (level < 0.01f)
+        level = 0.0f;
+      repaint();
+    }
+  }
+
+private:
+  float level = 0.0f;
+  std::atomic<bool> triggered{false};
+};
+
 // --- KEYBOARD WRAPPER (Renamed to avoid conflict) ---
 class CustomKeyboard : public juce::MidiKeyboardComponent {
 public:

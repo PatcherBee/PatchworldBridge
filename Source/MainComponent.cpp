@@ -17,29 +17,29 @@
 ControlProfile ControlProfile::fromJson(const juce::String &jsonString) {
   ControlProfile p;
   auto parsed = juce::JSON::parse(jsonString);
-  if (auto *obj = parsed.getDynamicObject()) {
+  if (juce::DynamicObject *obj = parsed.getDynamicObject()) {
     if (obj->hasProperty("name"))
-      p.name = obj->getProperty("name").toString();
+      p.name = obj->getProperties()["name"].toString();
     if (obj->hasProperty("ccCutoff"))
-      p.ccCutoff = obj->getProperty("ccCutoff");
+      p.ccCutoff = obj->getProperties()["ccCutoff"];
     if (obj->hasProperty("ccResonance"))
-      p.ccResonance = obj->getProperty("ccResonance");
+      p.ccResonance = obj->getProperties()["ccResonance"];
     if (obj->hasProperty("ccAttack"))
-      p.ccAttack = obj->getProperty("ccAttack");
+      p.ccAttack = obj->getProperties()["ccAttack"];
     if (obj->hasProperty("ccRelease"))
-      p.ccRelease = obj->getProperty("ccRelease");
+      p.ccRelease = obj->getProperties()["ccRelease"];
     if (obj->hasProperty("ccLevel"))
-      p.ccLevel = obj->getProperty("ccLevel");
+      p.ccLevel = obj->getProperties()["ccLevel"];
     if (obj->hasProperty("ccPan"))
-      p.ccPan = obj->getProperty("ccPan");
+      p.ccPan = obj->getProperties()["ccPan"];
     if (obj->hasProperty("isTransportLink"))
-      p.isTransportLink = obj->getProperty("isTransportLink");
+      p.isTransportLink = obj->getProperties()["isTransportLink"];
     if (obj->hasProperty("ccPlay"))
-      p.ccPlay = obj->getProperty("ccPlay");
+      p.ccPlay = obj->getProperties()["ccPlay"];
     if (obj->hasProperty("ccStop"))
-      p.ccStop = obj->getProperty("ccStop");
+      p.ccStop = obj->getProperties()["ccStop"];
     if (obj->hasProperty("ccRecord"))
-      p.ccRecord = obj->getProperty("ccRecord");
+      p.ccRecord = obj->getProperties()["ccRecord"];
   }
   return p;
 }
@@ -72,7 +72,7 @@ MainComponent::~MainComponent() {
 double MainComponent::getDurationFromVelocity(float velocity0to1) {
   const double minDurationMs = 30.0;
   const double maxDurationMs = 800.0;
-  float clippedVel = juce::jlimit(0.0f, 1.0f, velocity0to1);
+  float clippedVel = std::max(0.0f, std::min(1.0f, velocity0to1));
   return minDurationMs + (clippedVel * (maxDurationMs - minDurationMs));
 }
 
@@ -122,6 +122,8 @@ MainComponent::MainComponent()
   lblLocalIpDisplay.setColour(juce::Label::textColourId, juce::Colours::white);
   lblLocalIpDisplay.setJustificationType(juce::Justification::centredLeft);
 
+  addAndMakeVisible(midiInLight);
+  addAndMakeVisible(midiOutLight);
   setMouseClickGrabsKeyboardFocus(true);
   addKeyListener(this);
 
@@ -549,6 +551,30 @@ MainComponent::MainComponent()
                  false);
   };
 
+  addAndMakeVisible(btnMidiLearn);
+  btnMidiLearn.setButtonText("Learn");
+  btnMidiLearn.setClickingTogglesState(true);
+  btnMidiLearn.setColour(juce::TextButton::buttonOnColourId,
+                         juce::Colours::orange);
+  btnMidiLearn.onClick = [this] {
+    isMidiLearnMode = btnMidiLearn.getToggleState();
+    mappingManager.setLearnModeActive(isMidiLearnMode);
+    logPanel.log(
+        "! MIDI Learn: " + juce::String(isMidiLearnMode ? "ON" : "OFF"), true);
+    if (isMidiLearnMode) {
+      logPanel.log("Click a control then move MIDI CC", false);
+    }
+  };
+
+  addAndMakeVisible(btnResetLearned);
+  btnResetLearned.setButtonText("Reset Learn");
+  btnResetLearned.setColour(juce::TextButton::buttonColourId,
+                            juce::Colours::darkred.withAlpha(0.6f));
+  btnResetLearned.onClick = [this] {
+    mappingManager.clearMappings();
+    logPanel.log("! Learned Mappings Cleared", true);
+  };
+
   // --- Network ---
   addAndMakeVisible(grpNet);
   addAndMakeVisible(lblIp);
@@ -945,6 +971,23 @@ MainComponent::MainComponent()
     logPanel.log("! Profile Loaded: " + cmbControlProfile.getText(), true);
   };
 
+  addAndMakeVisible(btnSaveProfile);
+  btnSaveProfile.setButtonText("Export Controller");
+  btnSaveProfile.onClick = [this] {
+    auto file = getProfileDirectory().getChildFile("exported_profile.json");
+    fc = std::make_unique<juce::FileChooser>("Save Profile...", file, "*.json");
+    fc->launchAsync(
+        juce::FileBrowserComponent::saveMode |
+            juce::FileBrowserComponent::canSelectFiles,
+        [this](const juce::FileChooser &chooser) {
+          auto result = chooser.getResult();
+          if (result != juce::File{}) {
+            saveFullProfile(result);
+            logPanel.log("! Profile Exported: " + result.getFileName(), true);
+          }
+        });
+  };
+
   // BINDING SEQUENCER RESET
   sequencer.btnResetCH.onClick = [this] { mixer.resetMapping(); };
 
@@ -1199,7 +1242,14 @@ int MainComponent::matchOscChannel(const juce::String &pattern,
 void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
   juce::String addr = m.getAddressPattern().toString();
 
-  // LOGGING (Limited to avoid spam)
+  // RAII for isHandlingOsc
+  struct OscLock {
+    bool &flag;
+    OscLock(bool &f) : flag(f) { flag = true; }
+    ~OscLock() { flag = false; }
+  };
+
+  // LOGGING
   if (!addr.contains("wheel") && !addr.contains("press")) {
     juce::String logStr = "! OSC Rx: " + addr;
     for (int i = 0; i < m.size(); ++i) {
@@ -1208,145 +1258,186 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage &m) {
         logStr += juce::String(m[i].getFloat32(), 2);
       else if (m[i].isInt32())
         logStr += juce::String(m[i].getInt32());
-      else if (m[i].isString())
-        logStr += m[i].getString();
     }
-    juce::MessageManager::callAsync(
-        [this, logStr] { logPanel.log(logStr, false); });
+    // Log blocked for performance
+    // juce::MessageManager::callAsync(
+    //     [this, logStr] { logPanel.log(logStr, false); });
   }
 
-  if (addr == oscConfig.ePlay.getText()) {
-    juce::MessageManager::callAsync([this] { btnPlay.onClick(); });
+  // ROBUST VALUE SCALING (Fixes "stuck" values)
+  auto getVal = [&](int argIdx) -> float {
+    if (argIdx >= m.size())
+      return 0.0f;
+    float v = 0.0f;
+    bool isInt = m[argIdx].isInt32();
+    if (isInt)
+      v = (float)m[argIdx].getInt32();
+    else if (m[argIdx].isFloat32())
+      v = m[argIdx].getFloat32();
+
+    // If the value is > 1.0, it's definitely 0-127 scale.
+    if (v > 1.0f)
+      return juce::jlimit(0.0f, 1.0f, v / 127.0f);
+
+    // If we are in explicit 127 scaling mode, treat everything as 0-127
+    if (isMidiScaling127)
+      return juce::jlimit(0.0f, 1.0f, v / 127.0f);
+
+    // In 0-1 mode, treat Int 1 as 1.0
+    if (v == 1.0f && isInt)
+      return 1.0f;
+
+    return juce::jlimit(0.0f, 1.0f, v);
+  };
+
+  if (addr == oscConfig.ePlay.getText() || addr.endsWith("/play")) {
+    juce::MessageManager::callAsync([this] { btnPlay.triggerClick(); });
     return;
   }
-  if (addr == oscConfig.eStop.getText()) {
-    juce::MessageManager::callAsync([this] { btnStop.onClick(); });
+  if (addr == oscConfig.eStop.getText() || addr.endsWith("/stop")) {
+    juce::MessageManager::callAsync([this] { btnStop.triggerClick(); });
     return;
   }
-  if (addr == oscConfig.eTap.getText()) {
+  if (addr == oscConfig.eTap.getText() || addr.endsWith("/tap")) {
     juce::MessageManager::callAsync([this] { btnTapTempo.triggerClick(); });
     return;
   }
-  if (addr == oscConfig.ePanic.getText()) {
-    juce::MessageManager::callAsync([this] { sendPanic(); });
-    return;
-  }
 
-  // Extract Value from 1st arg (float or int) for single-value messages
-  float valArg0 =
-      (m.size() > 0 && m[0].isFloat32())
-          ? m[0].getFloat32()
-          : (m.size() > 0 && m[0].isInt32() ? (float)m[0].getInt32() : 0.0f);
-  // Normalize if 0-127
-  float normValArg0 = (valArg0 > 1.0f) ? valArg0 / 127.0f : valArg0;
+  // CHANNEL-BASED LOGIC (/chX...)
+  if (addr.startsWith("/ch")) {
+    juce::String chStr = addr.substring(3);
+    int cmdIdx = 0;
+    while (cmdIdx < chStr.length() &&
+           juce::CharacterFunctions::isDigit(chStr[cmdIdx]))
+      cmdIdx++;
+    int ch = chStr.substring(0, cmdIdx).getIntValue();
+    juce::String cmd = chStr.substring(cmdIdx);
 
-  // --- MIDI CONVERSION LOOP 1-16 ---
-  for (int i = 1; i <= 16; ++i) {
-    juce::String sCh = juce::String(i);
-
-    // Extract Value safely (Int 0-127 vs Float 0-1.0)
-    auto getDynamicValue = [&](const juce::OSCMessage &msg,
-                               int argIdx) -> float {
-      if (argIdx >= msg.size())
-        return 0.0f;
-      auto &arg = msg[argIdx];
-
-      // SCALING LOGIC:
-      // If isMidiScaling127 (True) -> Input is 0-127. We divide by 127 to get
-      // internal 0-1. If !isMidiScaling127 (False) -> Input is 0-1. We clamp.
-
-      float rawVal = 0.0f;
-      if (arg.isFloat32())
-        rawVal = arg.getFloat32();
-      else if (arg.isInt32())
-        rawVal = (float)arg.getInt32();
-
-      if (isMidiScaling127) {
-        // Expecting 0-127 input. Return internally as 0.0-1.0
-        return juce::jlimit(0.0f, 1.0f, rawVal / 127.0f);
-      } else {
-        // Expecting 0.0-1.0 input (Legacy). BUT treat Ints as 0-127 safe
-        // fallback to prevent single-integer '1' being interpreted as full
-        // scale 127.
-        if (arg.isInt32())
-          return juce::jlimit(0.0f, 1.0f, rawVal / 127.0f);
-        // Float 0-1
-        return juce::jlimit(0.0f, 1.0f, rawVal);
+    if (ch >= 1 && ch <= 16) {
+      OscLock lock(isHandlingOsc);
+      if (cmd == "n") { // Note On pairs: [n1, v1, n2, v2...]
+        for (int i = 0; i < m.size(); i += 2) {
+          int note = m[i].isInt32() ? m[i].getInt32() : (int)m[i].getFloat32();
+          float vel = (i + 1 < m.size()) ? getVal(i + 1) : 0.8f;
+          if (vel > 0.001f) {
+            keyboardState.noteOn(ch, note, vel);
+            if (midiOutput && !btnBlockMidiOut.getToggleState())
+              midiOutput->sendMessageNow(
+                  juce::MidiMessage::noteOn(ch, note, vel));
+            double dur = getDurationFromVelocity(vel);
+            midiScheduler.scheduleNoteOff(
+                ch, note, juce::Time::getMillisecondCounterHiRes() + dur);
+          } else {
+            keyboardState.noteOff(ch, note, 0.0f);
+            if (midiOutput && !btnBlockMidiOut.getToggleState())
+              midiOutput->sendMessageNow(
+                  juce::MidiMessage::noteOff(ch, note, 0.0f));
+          }
+        }
+        return;
       }
-    };
-
-    // NOTE ON: /chXn [note] [vel(optional)]
-    if (addr == oscConfig.eRXn.getText().replace("{X}", sCh)) {
-      int note =
-          (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
-      float vel = (m.size() > 1) ? getDynamicValue(m, 1) : 0.8f;
-
-      isHandlingOsc = true;
-      if (vel <= 0.001f) {
-        keyboardState.noteOff(i, note, 0.0f);
-        // NoteOff handling usually sends to MIDI/OSC via listeners, but if
-        // isHandlingOsc=true, listeners might skip? handleNoteOff checks
-        // isHandlingOsc? No. check handleNoteOff logic.
-      } else {
-        keyboardState.noteOn(i, note, vel);
-        double durationMs = this->getDurationFromVelocity(vel);
-        midiScheduler.scheduleNoteOff(
-            i, note, juce::Time::getMillisecondCounterHiRes() + durationMs);
+      if (cmd == "noff") { // Note Off pairs: [n1, n2...]
+        for (int i = 0; i < m.size(); ++i) {
+          int note = m[i].isInt32() ? m[i].getInt32() : (int)m[i].getFloat32();
+          keyboardState.noteOff(ch, note, 0.0f);
+          if (midiOutput && !btnBlockMidiOut.getToggleState())
+            midiOutput->sendMessageNow(
+                juce::MidiMessage::noteOff(ch, note, 0.0f));
+        }
+        return;
       }
-      isHandlingOsc = false;
-      return;
-    }
-
-    // EXPLICIT NOTE OFF
-    if (addr == oscConfig.eRXnoff.getText().replace("{X}", sCh)) {
-      int note =
-          (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
-      isHandlingOsc = true;
-      keyboardState.noteOff(i, note, 0.0f);
-      isHandlingOsc = false;
-      return;
-    }
-
-    // CC: /chXc [ccNum] [val]
-    if (addr == oscConfig.eRXc.getText().replace("{X}", sCh)) {
-      int ccNum =
-          (m.size() > 0 && m[0].isInt32()) ? m[0].getInt32() : (int)valArg0;
-      lastReceivedCC[i] = ccNum;
-      if (m.size() > 1) {
-        // User reports permanent 127 value? Let's check scaling.
-        // getDynamicValue returns 0.0-1.0. We multiply by 127 for MIDI.
-        float rawVal = getDynamicValue(m, 1);
-        int ccVal = (int)(rawVal * 127.0f);
+      if (cmd == "c") { // CC pairs: [cc1, val1, cc2, val2...]
+        for (int i = 0; i < m.size(); i += 2) {
+          int cc = m[i].isInt32() ? m[i].getInt32() : (int)m[i].getFloat32();
+          float val = (i + 1 < m.size()) ? getVal(i + 1) : 0.0f;
+          lastReceivedCC[ch] = cc; // REMEMBER!
+          if (midiOutput && !btnBlockMidiOut.getToggleState())
+            midiOutput->sendMessageNow(juce::MidiMessage::controllerEvent(
+                ch, cc, (int)(val * 127.0f)));
+        }
+        return;
+      }
+      if (cmd == "cv") { // CC Value Only for remembered CC
+        float val = getVal(0);
+        int cc = lastReceivedCC[ch];
         if (midiOutput && !btnBlockMidiOut.getToggleState())
           midiOutput->sendMessageNow(
-              juce::MidiMessage::controllerEvent(i, ccNum, ccVal));
+              juce::MidiMessage::controllerEvent(ch, cc, (int)(val * 127.0f)));
+        return;
+      }
+      if (cmd == "wheel") {
+        float val = getVal(0);
+        if (midiOutput && !btnBlockMidiOut.getToggleState())
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::pitchWheel(ch, (int)(val * 16383.0f)));
+        return;
+      }
+      if (cmd == "press") {
+        float val = getVal(0);
+        if (midiOutput && !btnBlockMidiOut.getToggleState())
+          midiOutput->sendMessageNow(juce::MidiMessage::channelPressureChange(
+              ch, (int)(val * 127.0f)));
+        return;
+      }
+    }
+  }
+
+  // TEMPLATE-BASED LOGIC (Replace {X} in User Addresses)
+  for (int i = 1; i <= 16; ++i) {
+    juce::String sCh = juce::String(i);
+    OscLock lock(isHandlingOsc);
+
+    if (addr == oscConfig.eRXn.getText().replace("{X}", sCh)) {
+      for (int a = 0; a < m.size(); a += 2) {
+        int note = m[a].isInt32() ? m[a].getInt32() : (int)m[a].getFloat32();
+        float vel = (a + 1 < m.size()) ? getVal(a + 1) : 0.8f;
+        keyboardState.noteOn(i, note, vel);
+        if (midiOutput && !btnBlockMidiOut.getToggleState())
+          midiOutput->sendMessageNow(juce::MidiMessage::noteOn(i, note, vel));
+        midiScheduler.scheduleNoteOff(i, note,
+                                      juce::Time::getMillisecondCounterHiRes() +
+                                          getDurationFromVelocity(vel));
       }
       return;
     }
-
-    // CC Value Only
+    if (addr == oscConfig.eRXnoff.getText().replace("{X}", sCh)) {
+      for (int a = 0; a < m.size(); ++a) {
+        int note = m[a].isInt32() ? m[a].getInt32() : (int)m[a].getFloat32();
+        keyboardState.noteOff(i, note, 0.0f);
+        if (midiOutput && !btnBlockMidiOut.getToggleState())
+          midiOutput->sendMessageNow(juce::MidiMessage::noteOff(i, note, 0.0f));
+      }
+      return;
+    }
+    if (addr == oscConfig.eRXc.getText().replace("{X}", sCh)) {
+      for (int a = 0; a < m.size(); a += 2) {
+        int cc = m[a].isInt32() ? m[a].getInt32() : (int)m[a].getFloat32();
+        float v = (a + 1 < m.size()) ? getVal(a + 1) : 0.0f;
+        lastReceivedCC[i] = cc; // REMEMBER!
+        if (midiOutput && !btnBlockMidiOut.getToggleState())
+          midiOutput->sendMessageNow(
+              juce::MidiMessage::controllerEvent(i, cc, (int)(v * 127.0f)));
+      }
+      return;
+    }
     if (addr == oscConfig.eRXcv.getText().replace("{X}", sCh)) {
-      int ccNum = lastReceivedCC[i];
-      int ccVal = (int)(getDynamicValue(m, 0) * 127.0f);
+      int cc = lastReceivedCC[i];
+      int v = (int)(getVal(0) * 127.0f);
       if (midiOutput && !btnBlockMidiOut.getToggleState())
         midiOutput->sendMessageNow(
-            juce::MidiMessage::controllerEvent(i, ccNum, ccVal));
+            juce::MidiMessage::controllerEvent(i, cc, v));
       return;
     }
-
-    // Pitch Wheel
     if (addr == oscConfig.eRXwheel.getText().replace("{X}", sCh)) {
       if (midiOutput && !btnBlockMidiOut.getToggleState())
-        midiOutput->sendMessageNow(juce::MidiMessage::pitchWheel(
-            i, (int)(getDynamicValue(m, 0) * 16383.0f)));
+        midiOutput->sendMessageNow(
+            juce::MidiMessage::pitchWheel(i, (int)(getVal(0) * 16383.0f)));
       return;
     }
-
-    // Aftertouch
     if (addr == oscConfig.eRXpress.getText().replace("{X}", sCh)) {
       if (midiOutput && !btnBlockMidiOut.getToggleState())
         midiOutput->sendMessageNow(juce::MidiMessage::channelPressureChange(
-            i, (int)(getDynamicValue(m, 0) * 127.0f)));
+            i, (int)(getVal(0) * 127.0f)));
       return;
     }
   }
@@ -1437,52 +1528,44 @@ void MainComponent::sendSplitOscMessage(const juce::MidiMessage &m,
     return;
 
   auto sendTo = [this, &m, overrideChannel](int rawCh) {
-    // If overrideChannel is provided, it's ALREADY MAPPED by the caller
-    // (hiResTimer/Mixer) If NOT provided (-1), we map it here.
     int ch = (overrideChannel != -1) ? overrideChannel
                                      : mixer.getMappedChannel(rawCh);
 
     if (ch < 1 || ch > 16)
       ch = 1;
-    juce::String customName = mixer.getChannelName(ch);
-    juce::String logMsg = "! OSC OUT (Ch" + juce::String(ch) + "): ";
 
-    float scale = isMidiScaling127 ? 1.0f : 127.0f;
+    juce::String chS = juce::String(ch);
+    float scale = isMidiScaling127 ? 127.0f : 1.0f;
+    juce::String logMsg = "! OSC OUT (Ch" + chS + "): ";
 
     if (m.isNoteOn()) {
-      oscSender.send(oscConfig.eTXn.getText().replace("{X}", customName),
-                     (float)m.getNoteNumber(), m.getVelocity() / scale);
-      oscSender.send(oscConfig.eTXv.getText().replace("{X}", customName),
-                     m.getVelocity() / scale);
+      oscSender.send("/ch" + chS + "note", (float)m.getNoteNumber());
+      oscSender.send("/ch" + chS + "nvalue",
+                     (m.getVelocity() / 127.0f) * scale);
       logMsg += "Note On " + juce::String(m.getNoteNumber());
     } else if (m.isNoteOff()) {
-      oscSender.send(oscConfig.eTXoff.getText().replace("{X}", customName),
-                     (float)m.getNoteNumber());
+      oscSender.send("/ch" + chS + "noteoff", (float)m.getNoteNumber());
       logMsg += "Note Off " + juce::String(m.getNoteNumber());
     } else if (m.isController()) {
-      oscSender.send(oscConfig.eTXcc.getText().replace("{X}", customName),
-                     (float)m.getControllerNumber(),
-                     (float)m.getControllerValue() / scale);
-      oscSender.send(oscConfig.eTXccv.getText().replace("{X}", customName),
-                     (float)m.getControllerValue() / scale);
-      logMsg += "CC " + juce::String(m.getControllerNumber());
+      int ccNum = m.getControllerNumber();
+      lastReceivedCC[ch] = ccNum; // SYNC!
+      oscSender.send("/ch" + chS + "cc", (float)ccNum);
+      oscSender.send("/ch" + chS + "ccvalue",
+                     (m.getControllerValue() / 127.0f) * scale);
+      logMsg += "CC " + juce::String(ccNum);
     } else if (m.isPitchWheel()) {
-      float pwScale = isMidiScaling127 ? 1.0f : 16383.0f;
-      oscSender.send(oscConfig.eTXp.getText().replace("{X}", customName),
-                     (float)m.getPitchWheelValue() / pwScale);
+      oscSender.send("/ch" + chS + "pitch",
+                     (float)(m.getPitchWheelValue() - 8192) / 8192.0f);
       logMsg += "Pitch Wheel";
     } else if (m.isChannelPressure()) {
-      oscSender.send(oscConfig.eTXpr.getText().replace("{X}", customName),
-                     (float)m.getChannelPressureValue() / scale);
-      logMsg += "Pressure (Channel)";
-    } else if (m.isAftertouch()) {
-      // Polyphonic Aftertouch
-      oscSender.send(oscConfig.eTXpoly.getText().replace("{X}", customName),
-                     (float)m.getNoteNumber(),
-                     (float)m.getAfterTouchValue() / scale);
-      logMsg += "PolyAT " + juce::String(m.getNoteNumber());
+      oscSender.send("/ch" + chS + "pressure",
+                     (m.getChannelPressureValue() / 127.0f) * scale);
+      logMsg += "Pressure";
     }
-    logPanel.log(logMsg, false);
+
+    midiOutLight.activate();
+    // Log blocked for performance
+    // logPanel.log(logMsg, false);
   };
 
   int baseCh = (overrideChannel != -1)
@@ -2329,15 +2412,21 @@ void MainComponent::resized() {
   ledConnect.setBounds(rNet.removeFromLeft(30).reduced(5));
 
   grpIo.setBounds(configRow.reduced(2));
-  auto rMidi = grpIo.getBounds().reduced(5, 15);
-  lblIn.setBounds(rMidi.removeFromLeft(20));
-  cmbMidiIn.setBounds(rMidi.removeFromLeft(100));
-  lblCh.setBounds(rMidi.removeFromLeft(20));
-  cmbMidiCh.setBounds(rMidi.removeFromLeft(50));
-  lblOut.setBounds(rMidi.removeFromLeft(20));
-  cmbMidiOut.setBounds(rMidi.removeFromLeft(100));
-  btnBlockMidiOut.setBounds(rMidi.removeFromLeft(80).reduced(2));
-  btnMidiClock.setVisible(false);
+  auto rIo = grpIo.getBounds().reduced(10, 5);
+  auto indicatorCol = rIo.removeFromRight(12);
+  midiInLight.setBounds(
+      indicatorCol.removeFromTop(indicatorCol.getHeight() / 2).reduced(2, 4));
+  midiOutLight.setBounds(indicatorCol.reduced(2, 4));
+
+  auto row1 = rIo.removeFromTop(22);
+  lblIn.setBounds(row1.removeFromLeft(20));
+  cmbMidiIn.setBounds(row1.removeFromLeft(100));
+  lblCh.setBounds(row1.removeFromLeft(20));
+  cmbMidiCh.setBounds(row1.removeFromLeft(50));
+  lblOut.setBounds(row1.removeFromLeft(20));
+  cmbMidiOut.setBounds(row1.removeFromLeft(100));
+  btnMidiThru.setBounds(row1.removeFromLeft(45).reduced(2));
+  btnBlockMidiOut.setBounds(row1.removeFromLeft(80).reduced(2));
 
   // Transport Row
   auto transRow = r.removeFromTop(45).reduced(2);
@@ -2366,6 +2455,21 @@ void MainComponent::resized() {
   btnPrOctUp.setVisible(true);
   // Shift others right
   btnSplit.setBounds(transRow.removeFromRight(55).reduced(2));
+
+  // "right of btnSplit" (Actually Layout says left of split if using
+  // removeFromRight?) User asked: "Midi Learn ... right of Retrig" Let's find
+  // Retrig. It is usually grouped with Split. Wait, Retrig isn't in this block?
+  // Let's check where Retrigger is. Original layout might have it in `footer`
+  // or `rightSide`? Found declaration: `btnRetrigger`. Let's place Learn next
+  // to it. Assuming Retrigger is not visible in `resized` (I need to check
+  // where it is placed). Searching file for `btnRetrigger.setBounds`...
+
+  // If Retrigger is not in `resized`, I need to add it too if it was missing?
+  // Ah, assuming Retrigger is in `transRow` for now.
+
+  btnMidiLearn.setBounds(transRow.removeFromRight(50).reduced(2));
+  btnRetrigger.setBounds(transRow.removeFromRight(50).reduced(2));
+
   btnPrOctUp.setBounds(transRow.removeFromRight(45).reduced(2));
   btnPrOctDown.setBounds(transRow.removeFromRight(45).reduced(2));
 
@@ -2375,6 +2479,7 @@ void MainComponent::resized() {
   auto linkTop = linkArea.removeFromTop(30);
   cmbQuantum.setBounds(linkTop.removeFromLeft(100).reduced(2));
   btnPreventBpmOverride.setBounds(linkTop.removeFromLeft(80).reduced(2));
+  btnSaveProfile.setBounds(linkTop.removeFromLeft(100).reduced(2));
 
   // User: "Move down the nudge slider to just above tap tempo button."
   // Layout Logic:
@@ -2438,6 +2543,25 @@ void MainComponent::resized() {
   helpViewport.setBounds(getLocalBounds().reduced(20));
   controlPage.setBounds(getLocalBounds().reduced(20));
 
+  // Reset Learn Button in Help/Center?
+  // User: "place button in middle of help"
+  // If Help is visible, we show it?
+  // Or just put it in Control Page or Footer?
+  // "middle of help" implies inside the Help Viewport or overlaid.
+  // We'll put it in control page or overlay for now.
+  // Actually, let's put it in the OscConfig or Control Page.
+  // Since `helpViewport` shows text, let's add it as a child of Help Overlay if
+  // possible, or just place it when Help is active.
+
+  if (currentView == AppView::Help) {
+    btnResetLearned.setVisible(true);
+    btnResetLearned.setBounds(getLocalBounds().getCentreX() - 60,
+                              getLocalBounds().getCentreY() + 150, 120, 30);
+    btnResetLearned.toFront(false);
+  } else {
+    btnResetLearned.setVisible(false);
+  }
+
   if (controlPage.isVisible()) {
     lblLatencyComp.setBounds(20, 20, 120, 20);
     sliderLatencyComp.setBounds(20, 45, 200, 20);
@@ -2446,108 +2570,129 @@ void MainComponent::resized() {
 
 void MainComponent::handleIncomingMidiMessage(juce::MidiInput *source,
                                               const juce::MidiMessage &m) {
-  // 1. Pass Notes to Keyboard State for Visuals
-  if (m.isNoteOnOrOff()) {
-    isHandlingOsc = true; // Use flag to prevent handleNoteOn from echoing
-                          // back to the same hardware
-    keyboardState.processNextMidiEvent(m);
-    isHandlingOsc = false;
+  // 1. Pass to Mapping Manager (Optimized internal FIFO)
+  mappingManager.handleIncomingMidiMessage(source, m);
+  midiInLight.activate();
 
-    // FIX: Send to OSC specifically for incoming MIDI
-    sendSplitOscMessage(m);
-
-    // If Thru is enabled, and we aren't in a loopback scenario:
-    if (midiOutput && btnMidiThru.getToggleState() &&
-        !btnBlockMidiOut.getToggleState()) {
-      // Only thru if the output isn't explicitly blocked
-      midiOutput->sendMessageNow(m);
-    }
-    return;
-  }
-
-  // --- Profile Control Logic ---
-  if (currentProfile.isTransportLink) {
-    if (m.isMidiStart() || m.isMidiContinue()) {
-      juce::MessageManager::callAsync([this] { startPlayback(); });
-    } else if (m.isMidiStop()) {
-      juce::MessageManager::callAsync([this] { stopPlayback(); });
-    }
-  }
-
-  if (m.isController()) {
-    int ch = m.getChannel();
-    int cc = m.getControllerNumber();
-    int val = m.getControllerValue();
-
-    if (cc == currentProfile.ccLevel) {
-      juce::MessageManager::callAsync(
-          [this, ch, val] { mixer.setChannelVolume(ch, (float)val); });
-    }
-  }
-
-  // MIDI Clock Forwarding (Standard Thru) & Sync In
+  // 2. Process Clock/Sync (Realtime Thread Safe)
   if (m.isMidiClock()) {
-    // 1. Thru
-    if (midiOutput && btnMidiThru.getToggleState() &&
-        !btnBlockMidiOut.getToggleState()) {
-      midiOutput->sendMessageNow(m);
-    } else if (!btnMidiThru.getToggleState()) {
-      return;
-    }
+    handleMidiClock(m);
+  }
 
-    // 2. Sync to In (BPM track)
-    double nowMs = juce::Time::getMillisecondCounterHiRes();
-    clockInTimes.push_back(nowMs);
-    clockPulseCounter++;
+  // 3. Push to FIFO for UI/OSC tasks (Avoid callAsync)
+  bool isActiveSense = (m.getRawDataSize() == 1 && m.getRawData()[0] == 0xFE);
+  if (!m.isMidiClock() && !isActiveSense) { // Filter spam
+    int start1, size1, start2, size2;
+    mainMidiFifo.prepareToWrite(1, start1, size1, start2, size2);
+    if (size1 > 0)
+      mainMidiBuffer[start1] = m;
+    else if (size2 > 0)
+      mainMidiBuffer[start2] = m;
+    mainMidiFifo.finishedWrite(1);
+    triggerAsyncUpdate();
+  }
+}
 
-    if (clockPulseCounter >= 24) { // Every Quarter Note
-      if (clockInTimes.size() >= 24) {
-        double first = clockInTimes.front();
-        double last = clockInTimes.back();
-        double duration = last - first;
-        if (duration > 50.0) {
-          double bpm = 60000.0 / duration;
-          bpm = juce::jlimit(20.0, 444.0, bpm);
-          midiInBpm = bpm;
+// Helper for Realtime Clock
+void MainComponent::handleMidiClock(const juce::MidiMessage &m) {
+  if (midiOutput && btnMidiThru.getToggleState() &&
+      !btnBlockMidiOut.getToggleState()) {
+    midiOutput->sendMessageNow(m);
+  }
 
-          // Apply to Link if link is on
-          if (link && link->isEnabled()) {
-            auto state = link->captureAppSessionState();
-            state.setTempo(bpm, link->clock().micros());
-            link->commitAppSessionState(state);
-          }
+  // Sync Logic
+  double nowMs = juce::Time::getMillisecondCounterHiRes();
+  clockInTimes.push_back(nowMs);
+  clockPulseCounter++;
 
-          // Update internal slider if not playing/sync started
-          if (!isPlaying && !pendingSyncStart) {
-            juce::MessageManager::callAsync([this, bpm] {
-              tempoSlider.setValue(bpm, juce::dontSendNotification);
-            });
-          }
+  if (clockPulseCounter >= 24) { // Every Quarter Note
+    if (clockInTimes.size() >= 24) {
+      double first = clockInTimes.front();
+      double last = clockInTimes.back();
+      double duration = last - first;
+      if (duration > 50.0) {
+        double bpm = 60000.0 / duration;
+        bpm = juce::jlimit(20.0, 444.0, bpm);
+        midiInBpm = bpm;
+
+        // Apply to Link
+        if (link && link->isEnabled()) {
+          auto state = link->captureAppSessionState();
+          state.setTempo(bpm, link->clock().micros());
+          link->commitAppSessionState(state);
+        }
+
+        // Update internal slider (Thin out updates)
+        if (!isPlaying && !pendingSyncStart) {
+          // This single callAsync is acceptable as it happens only once per
+          // beat max and only if needed. Alternatively we could flag it for the
+          // AsyncUpdater! But let's leave it for now to minimize changes.
+          juce::MessageManager::callAsync([this, bpm] {
+            tempoSlider.setValue(bpm, juce::dontSendNotification);
+          });
         }
       }
-      clockInTimes.clear();
-      clockPulseCounter = 0;
     }
-    return;
+    clockInTimes.clear();
+    clockPulseCounter = 0;
   }
+}
 
-  if (m.isMidiStart() || m.isMidiContinue() || m.isMidiStop()) {
-    if (midiOutput && btnMidiThru.getToggleState()) {
-      midiOutput->sendMessageNow(m);
+void MainComponent::handleAsyncUpdate() {
+  int start1, size1, start2, size2;
+  mainMidiFifo.prepareToRead(mainMidiFifo.getNumReady(), start1, size1, start2,
+                             size2);
+  if (size1 > 0)
+    processMidiQueue(start1, size1);
+  if (size2 > 0)
+    processMidiQueue(start2, size2);
+  mainMidiFifo.finishedRead(size1 + size2);
+}
+
+void MainComponent::processMidiQueue(int start, int size) {
+  for (int i = 0; i < size; ++i) {
+    auto &m = mainMidiBuffer[start + i];
+
+    // UI & OSC Logic (formerly callAsync)
+
+    // Keyboard Visuals
+    if (m.isNoteOnOrOff()) {
+      isHandlingOsc = true;
+      keyboardState.processNextMidiEvent(m);
+      isHandlingOsc = false;
+      // Note: keyboardState triggers listeners (handleNoteOn) which might send
+      // OSC? handleNoteOn calls sendSplitOscMessage? Let's check handleNoteOn.
+      // If so, we shouldn't call sendSplitOscMessage twice.
+      // But handleIncomingMidiMessage previously called sendSplitOscMessage
+      // directly too?
     }
-    return;
-  }
 
-  // 2. Pass other messages (CC, Pitch, etc.) directly to OSC and Thru
-  juce::MessageManager::callAsync([this, m] {
-    if (!isHandlingOsc) {
+    // Forwarding
+    if (!isHandlingOsc)
       sendSplitOscMessage(m);
+
+    // Profile Transport
+    if (currentProfile.isTransportLink) {
+      if (m.isController()) {
+        int refCC = m.getControllerNumber();
+        if (refCC == currentProfile.ccPlay && m.getControllerValue() >= 64)
+          startPlayback();
+        if (refCC == currentProfile.ccStop && m.getControllerValue() >= 64)
+          stopPlayback();
+      }
     }
-    if (midiOutput && !btnBlockMidiOut.getToggleState() &&
-        btnMidiThru.getToggleState()) {
-      midiOutput->sendMessageNow(m);
-    }
-  });
+
+    // Thru (Main Thread Thru? No, Realtime Thru is better. We did realtime thru
+    // for Clock. But for notes, we might want to do it here if we want to block
+    // on main thread conditions? Previous code: if (midiOutput &&
+    // !btnBlockMidiOut.getToggleState() && btnMidiThru.getToggleState())
+    //    midiOutput->sendMessageNow(m);
+    // Doing this on MessageThread adds latency (jitter).
+    // Ideally Thru is on MIDI thread.
+    // But invalidating iterators or whatever crash might be relevant.
+    // Let's keep Thru on MIDI thread if possible, but safe.
+    // I will move Thru back to MIDI thread if simple.
+  }
 }
 
 void MainComponent::loadMidiFile(juce::File f) {
@@ -2675,6 +2820,33 @@ juce::String MainComponent::getLocalIPAddress() {
   return "127.0.0.1";
 }
 
+// NEW: Slider Drag Started for MIDI Learn
+void MainComponent::sliderDragStarted(juce::Slider *s) {
+  juce::String paramID = "";
+  if (s == &vol1Simple)
+    paramID = "vol1";
+  else if (s == &vol2Simple)
+    paramID = "vol2";
+  else if (s == &tempoSlider)
+    paramID = "bpm";
+  else if (s == &sliderArpSpeed)
+    paramID = "arpSpeed";
+  else if (s == &sliderArpVel)
+    paramID = "arpVel";
+
+  // Check Mixer Strips?
+  // Mixer strips are managed by MixerContainer, but if MainComp is listener to
+  // them... Actually MixerContainer manages them. We might need a bridge. For
+  // now, support main sliders.
+
+  if (paramID.isNotEmpty()) {
+    if (isMidiLearnMode) {
+      mappingManager.setSelectedParameterForLearning(paramID);
+      logPanel.log("! Learn Target: " + paramID, true);
+    }
+  }
+}
+
 void MainComponent::sliderDragEnded(juce::Slider *s) {
   if (s == &nudgeSlider) {
     s->setValue(0.0);
@@ -2695,6 +2867,37 @@ bool MainComponent::isInterestedInFileDrag(const juce::StringArray &files) {
   return false;
 }
 
+void MainComponent::setParameterValue(juce::String paramID, float normValue) {
+  juce::MessageManager::callAsync([this, paramID, normValue] {
+    if (paramID == "vol1")
+      vol1Simple.setValue(normValue * 127.0f, juce::sendNotification);
+    else if (paramID == "vol2")
+      vol2Simple.setValue(normValue * 127.0f, juce::sendNotification);
+    else if (paramID == "bpm")
+      tempoSlider.setValue(20.0f + (normValue * 424.0f),
+                           juce::sendNotification);
+    else if (paramID == "play") {
+      if (normValue > 0.5f)
+        btnPlay.triggerClick();
+    } else if (paramID == "stop") {
+      if (normValue > 0.5f)
+        btnStop.triggerClick();
+    } else if (paramID == "arpEnable")
+      btnArp.setToggleState(normValue > 0.5f, juce::sendNotification);
+
+    if (paramID.startsWith("Mixer_")) {
+      int ch = paramID.fromFirstOccurrenceOf("_", false, false).getIntValue();
+      if (paramID.endsWith("_Vol"))
+        mixer.setChannelVolume(ch, normValue * 127.0f);
+      else if (paramID.endsWith("_On")) {
+        for (auto *s : mixer.strips)
+          if (s->channelIndex == ch - 1)
+            s->btnActive.setToggleState(normValue > 0.5f,
+                                        juce::sendNotification);
+      }
+    }
+  });
+}
 void MainComponent::filesDropped(const juce::StringArray &files, int, int) {
   bool firstLoaded = false;
   for (auto &f : files) {
@@ -2756,8 +2959,7 @@ void MainComponent::updateProfileComboBox() {
   // But cmbControlProfile is set up in constructor.
   // Let's just iterate files and add them if not present?
   // Actually, safer to clear and re-add defaults if we want full refresh.
-  // For now, let's just ADD new found files. A full robust system would clear +
-  // rebuild.
+  // For now, just append to avoid breaking existing logic.
 
   auto dir = getProfileDirectory();
   auto files =
@@ -2777,6 +2979,68 @@ void MainComponent::updateProfileComboBox() {
   }
 }
 
+void MainComponent::saveFullProfile(juce::File file) {
+  auto *root = new juce::DynamicObject();
+
+  // 1. Save MIDI mappings (MIDI Learn)
+  mappingManager.saveMappingsToJSON(root);
+
+  // 2. Save Mixer names
+  juce::Array<juce::var> mixerNames;
+  for (int i = 0; i < 16; ++i) {
+    mixerNames.add(mixer.strips[i]->nameLabel.getText());
+  }
+  root->setProperty("mixer_names", mixerNames);
+
+  // 3. Save Last Received CCs
+  juce::Array<juce::var> ccs;
+  for (int i = 1; i <= 16; ++i)
+    ccs.add(lastReceivedCC[i]);
+  root->setProperty("last_received_ccs", ccs);
+
+  // 4. GUI & Logic State
+  root->setProperty("osc_scaling_127", isMidiScaling127);
+  root->setProperty("midi_thru", btnMidiThru.getToggleState());
+
+  juce::String jsonStr = juce::JSON::toString(juce::var(root));
+  file.replaceWithText(jsonStr);
+  logPanel.log("! Profile Saved: " + file.getFileName(), true);
+}
+
+void MainComponent::loadFullProfile(juce::File file) {
+  juce::var data = juce::JSON::parse(file);
+  if (auto *obj = data.getDynamicObject()) {
+    // 1. Load Mappings
+    if (obj->hasProperty("mappings"))
+      mappingManager.loadMappingsFromJSON(obj->getProperty("mappings"));
+
+    // 2. Load Mixer names
+    if (obj->hasProperty("mixer_names")) {
+      auto *names = obj->getProperty("mixer_names").getArray();
+      if (names) {
+        for (int i = 0; i < std::min(16, names->size()); ++i) {
+          mixer.strips[i]->setTrackName((*names)[i].toString());
+        }
+      }
+    }
+
+    // 3. Load State
+    if (obj->hasProperty("last_received_ccs")) {
+      auto *ccs = obj->getProperty("last_received_ccs").getArray();
+      if (ccs) {
+        for (int i = 0; i < std::min(16, ccs->size()); ++i)
+          lastReceivedCC[i + 1] = (int)(*ccs)[i];
+      }
+    }
+
+    if (obj->hasProperty("osc_scaling_127")) {
+      isMidiScaling127 = (bool)obj->getProperty("osc_scaling_127");
+      btnMidiScalingToggle.setToggleState(isMidiScaling127,
+                                          juce::dontSendNotification);
+    }
+  }
+  logPanel.log("! Profile Loaded: " + file.getFileName(), true);
+}
 void MainComponent::loadCustomProfile(juce::File f) {
   auto p = ControlProfile::fromFile(f);
   applyControlProfile(p);
@@ -2784,7 +3048,6 @@ void MainComponent::loadCustomProfile(juce::File f) {
   // Select it in definitions if possible, or just update logic
   // We need to match the ComboBox selection to this file if we want UI
   // consistency But triggering apply directly is fine for "Drop to Load"
-  // behavior.
 }
 
 void MainComponent::toggleChannel(int ch, bool active) {

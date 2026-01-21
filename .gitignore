@@ -16,6 +16,8 @@ build_debug/
 build_final/
 build_vs/
 build_win/
+build_vscode/
+release_build_output.txt
 
 JUCE/
 build_*.txt

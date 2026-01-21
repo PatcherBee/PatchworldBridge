@@ -5,6 +5,11 @@
   <MAINGROUP id="umOpkX" name="PatchworldBridge">
     <GROUP id="{397D688E-3610-4AC6-3CBD-6EECCAF53C66}" name="Source">
       <GROUP id="{577FF634-CB2C-28B2-E39F-A3CB44B602E0}" name="Components">
+        <FILE id="vnn9bE" name="MidiLearnOverlay.h" compile="0" resource="0"
+              file="Source/Components/MidiLearnOverlay.h"/>
+        <FILE id="QhhLqH" name="MidiMappingManager.h" compile="0" resource="0"
+              file="Source/Components/MidiMappingManager.h"/>
+        <FILE id="fObiwl" name="MidiScheduler.h" compile="0" resource="0" file="Source/Components/MidiScheduler.h"/>
         <FILE id="cQNkdw" name="Common.h" compile="0" resource="0" file="Source/Components/Common.h"/>
         <FILE id="pTs6N3" name="Controls.h" compile="0" resource="0" file="Source/Components/Controls.h"/>
         <FILE id="a1S8Oo" name="Mixer.h" compile="0" resource="0" file="Source/Components/Mixer.h"/>
@@ -15,6 +20,7 @@
       <FILE id="TvI7eR" name="ControlProfile.h" compile="0" resource="0"
             file="Source/ControlProfile.h"/>
       <FILE id="HUXqul" name="SubComponents.h" compile="0" resource="0" file="Source/SubComponents.h"/>
+      <FILE id="tsR21D" name="MidiScheduler.h" compile="0" resource="0" file="Source/MidiScheduler.h"/>
       <FILE id="Ej6Amu" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="tkXB53" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="jCzUqA" name="MainComponent.cpp" compile="1" resource="0"

@@ -6,6 +6,7 @@
 #pragma once
 #include "Common.h"
 #include <JuceHeader.h>
+#include <functional>
 
 class MixerContainer : public juce::Component,
                        public juce::DragAndDropContainer {
@@ -18,10 +19,12 @@ public:
     juce::ToggleButton btnActive;
     juce::ToggleButton btnSolo; // New Solo Button
     int channelIndex;
-    int visualIndex; // For display order
+    int visualIndex;    // For display order
+    int controlCC = -1; // Default -1 = No Mapping
     std::function<void(int, float)> onLevelChange;
     std::function<void(int, bool)> onActiveChange;
-    std::function<void()> onSoloChange; // New callback
+    std::function<void()> onSoloChange;
+    std::function<void(juce::String)> onControlClicked; // NEW
 
     MixerStrip(int i) : channelIndex(i), visualIndex(i) {
       volSlider.setSliderStyle(juce::Slider::LinearVertical);
@@ -29,6 +32,15 @@ public:
       volSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
       volSlider.addListener(this);
       addAndMakeVisible(volSlider);
+
+      // Add Mouse Listener for Learn
+      volSlider.getProperties().set(
+          "paramID", "Mixer_" + juce::String(channelIndex + 1) + "_Vol");
+      btnActive.getProperties().set(
+          "paramID", "Mixer_" + juce::String(channelIndex + 1) + "_On");
+      btnSolo.getProperties().set(
+          "paramID", "Mixer_" + juce::String(channelIndex + 1) + "_Solo");
+      // ...
       nameLabel.setText(juce::String(i + 1)); // Shows actual MIDI CH
       nameLabel.setFont(juce::FontOptions(12.0f));
       nameLabel.setJustification(juce::Justification::centred);
@@ -37,7 +49,8 @@ public:
       nameLabel.setColour(juce::TextEditor::outlineColourId,
                           juce::Colours::transparentBlack);
       addAndMakeVisible(nameLabel);
-      nameLabel.setInterceptsMouseClicks(false, false); // Fix Drag
+      nameLabel.setReadOnly(false);
+      nameLabel.setInterceptsMouseClicks(true, true);
 
       btnActive.setToggleState(true, juce::dontSendNotification);
       btnActive.setButtonText("ON");
@@ -69,6 +82,8 @@ public:
     juce::Label trackLabel;
     void setTrackName(juce::String n) {
       trackLabel.setText(n, juce::dontSendNotification);
+      if (n.isNotEmpty() && n != juce::String(channelIndex + 1))
+        nameLabel.setText(n, juce::dontSendNotification);
     }
     void sliderValueChanged(juce::Slider *s) override {
       if (onLevelChange)
@@ -143,14 +158,17 @@ public:
   juce::OwnedArray<MixerStrip> strips;
   std::function<void(int, float)> onMixerActivity;
   std::function<void(int, bool)> onChannelToggle;
+  std::function<void(juce::String)> onControlClicked;
   const int stripWidth = 60;
 
   MixerContainer() {
-    for (int i = 0; i < 16; ++i)
+    for (int i = 0; i < 16; ++i) {
       channelMapping[i] = i;
+    }
 
     for (int i = 0; i < 16; ++i) {
       auto *s = strips.add(new MixerStrip(i));
+      s->controlCC = 20 + i; // Default Map: CC 20-35
       s->onLevelChange = [this](int ch, float val) {
         if (onMixerActivity)
           onMixerActivity(ch, val);
@@ -160,6 +178,10 @@ public:
           onChannelToggle(ch, active);
       };
       s->onSoloChange = [this] { updateSoloStates(); };
+      s->onControlClicked = [this](juce::String id) {
+        if (onControlClicked)
+          onControlClicked(id);
+      };
       addAndMakeVisible(s);
     }
   }

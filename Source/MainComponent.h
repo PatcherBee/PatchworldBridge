@@ -9,16 +9,22 @@
 #include "ControlProfile.h"
 #include <JuceHeader.h>
 #include <ableton/Link.hpp>
+#include <memory>
+
+namespace juce {
+class FileChooser;
+}
 
 // Use flat includes if files are in the same directory
 #include "Common.h"
 #include "Components/Controls.h"
+#include "Components/MidiLearnOverlay.h"
+#include "Components/MidiMappingManager.h"
 #include "Components/MidiScheduler.h"
 #include "Components/Mixer.h"
 #include "Components/Sequencer.h"
 #include "Components/Tools.h"
 #include "SubComponents.h"
-
 
 class MainComponent : public juce::AudioAppComponent,
                       public juce::Timer,
@@ -30,12 +36,22 @@ class MainComponent : public juce::AudioAppComponent,
                       public juce::Slider::Listener,
                       public juce::FileDragAndDropTarget,
                       public juce::KeyListener,
-                      public juce::ValueTree::Listener {
+                      public juce::ValueTree::Listener,
+                      public juce::AsyncUpdater {
 public:
+  //==============================================================================
   MainComponent();
   ~MainComponent() override;
 
-  // Standard JUCE Lifecycle
+  // MIDI FIFO (Lock-Free)
+  juce::AbstractFifo mainMidiFifo{4096};
+  std::array<juce::MidiMessage, 4096> mainMidiBuffer;
+  void handleAsyncUpdate() override;
+  void processMidiQueue(int start, int size);
+  void handleMidiClock(const juce::MidiMessage &m);
+
+  //==============================================================================
+  //Standard JUCE Lifecycle
   void paint(juce::Graphics &g) override;
   void resized() override;
 
@@ -59,6 +75,7 @@ public:
 
   // Slider Listener (Declarations ONLY)
   void sliderValueChanged(juce::Slider *slider) override;
+  void sliderDragStarted(juce::Slider *slider) override;
   void sliderDragEnded(juce::Slider *slider) override;
 
   // Drag & Drop (Declarations ONLY)
@@ -96,6 +113,7 @@ private:
   MixerContainer mixer;
   OscAddressConfig oscConfig;
   ControlPage controlPage;
+  MidiIndicator midiInLight, midiOutLight;
 
   // Viewports and Overlays
   juce::Viewport oscViewport, helpViewport, mixerViewport;
@@ -121,12 +139,15 @@ private:
   juce::ToggleButton btnMidiScalingToggle{"Scale 0-127"}; // New Toggle
   juce::TextButton btnPlay, btnStop, btnPrev, btnSkip, btnClearPR, btnResetBPM,
       btnConnect, btnPreventBpmOverride, btnBlockMidiOut, btnGPU, btnArp,
-      btnArpSync;
+      btnArpSync, btnArpLatch;
   juce::TextButton btnPrOctUp, btnPrOctDown, btnSplit, btnRetrigger,
-      btnMidiThru, btnMidiClock;
+      btnMidiThru, btnMidiClock, btnMidiLearn,
+      btnResetLearned; // Added Reset Learned
   juce::ToggleButton btnResetMixerOnLoad{"Reset Mixer on Track Load"};
+  juce::TextButton btnSaveProfile{"Save Profile"};
+  juce::TextButton btnLoadProfile{"Load Profile"};
+  std::unique_ptr<juce::FileChooser> fileChooser;
 
-  // Custom Visualizers
   PhaseVisualizer phaseVisualizer;
   ConnectionLight ledConnect;
   juce::DrawableRectangle wheelFutureBox;
@@ -139,8 +160,12 @@ private:
   bool isHandlingOsc = false;
   bool startupRetryActive = true;
   bool isFullRangeMidi = false;
+  bool isMidiLearnMode = false;
+  juce::String lastClickedControlID = "";
+  juce::Component *lastClickedComponent = nullptr;
   bool isMidiScaling127 =
-      false; // Default: 0-1 (False) switchable to 0-127 (True)
+      false;         // Default: 0-1 (False) switchable to 0-127 (True)
+  int blockMode = 0; // 0=Off, 1=Block All, 2=Block Playback Only
 
   double quantum = 4.0;
   double transportStartBeat = 0.0;
@@ -189,6 +214,9 @@ private:
   juce::Slider sliderClockOffset; // For manual offset
   juce::Label lblClockOffset;
 
+  MidiMappingManager mappingManager;
+  std::unique_ptr<MidiLearnOverlay> learnOverlay;
+
   enum ClockMode { Smooth, PhaseLocked };
   ClockMode clockMode = Smooth;
 
@@ -201,7 +229,12 @@ private:
   // Profile Management
   void updateProfileComboBox();
   void loadCustomProfile(juce::File f);
+  void saveProfile(const juce::File &file); // Legacy single-profile save
+  void saveFullProfile(juce::File file);    // NEW: Full save
+  void loadFullProfile(juce::File file);    // NEW: Full load
   juce::File getProfileDirectory();
+  void exportSequencerToMidi(juce::File file); // Added Feature
+  juce::File profileFile; // To keep track of current profile file
 
   // Private Helper Methods
   void setView(AppView v);
@@ -215,6 +248,8 @@ private:
   void toggleChannel(int ch, bool active);
   int getSelectedChannel() const;
   juce::String getLocalIPAddress();
+  void setParameterValue(juce::String paramID,
+                         float normValue); // Bridge for Mapping
   double getDurationFromVelocity(float velocity0to1);
   int matchOscChannel(const juce::String &pattern,
                       const juce::String &incoming);
@@ -224,8 +259,12 @@ private:
 
   // Snapshot/Undo members
   void takeSnapshot();
+
+  std::unique_ptr<juce::FileChooser> fc; // Added for async file choosing
   void performUndo();
   void performRedo();
+
+  void launchMidiExport();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

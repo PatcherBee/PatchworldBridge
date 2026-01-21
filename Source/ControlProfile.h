@@ -15,6 +15,9 @@ struct ControlProfile {
   int ccStop = -1;
   int ccRecord = -1;
 
+  // Custom Mappings: ID -> CC
+  std::map<juce::String, int> customMappings;
+
   static ControlProfile getDefault() { return ControlProfile(); }
 
   static ControlProfile getRolandJDXi() {
