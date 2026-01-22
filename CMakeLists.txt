@@ -6,10 +6,10 @@ project(PatchworldBridge VERSION 1.0.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 1. Add JUCE (Expects a 'JUCE' folder with its own CMakeLists.txt)
+# 1. Add JUCE
 add_subdirectory(JUCE)
 
-# 2. Setup Ableton Link & Asio (Resolves 'IoContext' and 'Clock' errors)
+# 2. Setup Ableton Link & Asio
 add_library(AbletonLink INTERFACE)
 target_include_directories(AbletonLink INTERFACE 
     "link/include"
@@ -47,7 +47,7 @@ target_sources(PatchworldBridge PRIVATE
     Source/Components/Controls.h
     Source/Components/MidiScheduler.h)
 
-# 5. Header Search Paths (Fixes IntelliSense and "File Not Found" errors)
+# 5. Header Search Paths
 target_include_directories(PatchworldBridge PRIVATE 
     Source
     Source/Components
@@ -71,7 +71,7 @@ target_link_libraries(PatchworldBridge PRIVATE
     juce::juce_audio_utils
     juce::juce_opengl)
 
-# 7. Binary Data (Matches BinaryData::logo_png in MainComponent.cpp)
+# 7. System Libraries & Binary Data
 if(WIN32)
     target_link_libraries(PatchworldBridge PRIVATE ws2_32 iphlpapi)
 endif()
@@ -81,5 +81,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/logo.png")
     target_link_libraries(PatchworldBridge PRIVATE BinaryData)
 endif()
 
-# 8. Generate Header (Must be at the end)
+# 8. Generate Header
 juce_generate_juce_header(PatchworldBridge)
+
+# 9. FIX FOR MSVC EXCEPTIONS & UNWIND SEMANTICS
+if(MSVC)
+    target_compile_options(PatchworldBridge PRIVATE /EHsc /bigobj)
+endif()

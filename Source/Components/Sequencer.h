@@ -1,7 +1,7 @@
 /*
   ==============================================================================
     Source/Components/Sequencer.h
-    Status: FIXED (Added missing isStepActive method)
+    Status: VERIFIED COMPLETE (All helpers & buttons present)
   ==============================================================================
 */
 #pragma once
@@ -9,6 +9,11 @@
 #include <JuceHeader.h>
 #include <functional>
 #include <vector>
+
+struct StepData {
+  int note = 60;
+  float velocity = 0.78f;
+};
 
 class StepSequencer : public juce::Component {
 public:
@@ -18,27 +23,49 @@ public:
     juce::String name;
   };
   std::vector<Track> activeTracks;
+  std::vector<StepData> stepData;
 
+  // --- ROLL BUTTONS ---
   juce::TextButton btnRoll4{"1/4"}, btnRoll8{"1/8"}, btnRoll16{"1/16"},
       btnRoll32{"1/32"};
   int activeRollDiv = 0;
+
+  // --- CONFIG ---
   juce::Slider noteSlider;
   juce::ComboBox cmbSteps;
   juce::ComboBox cmbTimeSig;
-  juce::ComboBox cmbSeqOutCh; // New Output Channel selection
+  juce::ComboBox cmbSeqOutCh;
+  juce::ComboBox cmbMode;
   int outputChannel = 1;
-  juce::TextButton btnResetCH{"Reset CH"};
 
-  juce::Label lblTitle{{}, "Sequencer"};
+  // --- BOTTOM ROW CONTROLS ---
+  juce::TextButton btnPage{"Page 1"};
+
+  juce::TextButton btnSwing{"Swing"}; // Button (if needed)
+  juce::Slider swingSlider;           // Slider (Main Swing control)
+
+  juce::TextButton btnCountIn{"Cnt"}; // Changed from ToggleButton to TextButton
+  juce::TextButton btnRec{"Rec"};
+  juce::TextButton btnExport{"Export"};
+
+  juce::TextButton btnForceGrid{
+      "Grid"}; // Renamed from btnQuantize, TextButton for color
+
+  juce::TextButton btnResetCH{"Reset CH"};
+  juce::TextButton btnClearAll{"Clear All"};
+  juce::TextButton btnClear{"Clear"}; // Header clear button
+
+  // --- GRID ---
+  juce::ToggleButton btnLinkRoot{"Link Root"};
   juce::OwnedArray<juce::ToggleButton> stepButtons;
+
+  // --- STATE ---
   std::function<void(int, int)> onTimeSigChange;
+  std::function<void()> onExportRequest;
 
   int numSteps = 16, currentStep = -1;
-  juce::TextButton btnClear{"Clear"};
-
   enum Mode { Time, Loop, Roll };
   Mode currentMode = Mode::Time;
-  juce::ComboBox cmbMode;
 
   // Roll/Loop State
   double rollCaptureBeat = 0.0;
@@ -47,14 +74,33 @@ public:
 
   // 32-Step Paging & Rec
   int currentPage = 0;
-  juce::TextButton btnPage{"Page 1"};
-  juce::TextButton btnRec{"Rec"};
-  juce::TextButton btnExport{"Export"};
   bool isRecording = false;
 
+  // ==============================================================================
+  // HELPERS (Defined before use)
+  // ==============================================================================
+  void clearSteps() {
+    for (auto *b : stepButtons)
+      b->setToggleState(false, juce::dontSendNotification);
+    repaint();
+  }
+
+  void clearAllSequencerData() {
+    int defaultNote = (int)noteSlider.getValue();
+    for (auto &s : stepData) {
+      s.note = defaultNote;
+      s.velocity = 0.78f;
+    }
+    clearSteps();
+  }
+
+  // ==============================================================================
+  // CONSTRUCTOR
+  // ==============================================================================
   StepSequencer() {
-    addAndMakeVisible(lblTitle);
-    lblTitle.setFont(juce::FontOptions(12.0f).withStyle("Bold"));
+    addAndMakeVisible(btnLinkRoot);
+    btnLinkRoot.setTooltip("Link Root Note Slider to Recorded Steps");
+    btnLinkRoot.setToggleState(true, juce::dontSendNotification);
 
     // Time Sig
     addAndMakeVisible(cmbTimeSig);
@@ -64,19 +110,18 @@ public:
     cmbTimeSig.setSelectedId(1, juce::dontSendNotification);
     cmbTimeSig.onChange = [this] {
       int id = cmbTimeSig.getSelectedId();
-      int num = 4;
-      if (id == 2)
-        num = 3; // 3/4
-      if (id == 3)
-        num = 5; // 5/4
+      int num = (id == 2) ? 3 : (id == 3 ? 5 : 4);
       if (onTimeSigChange)
         onTimeSigChange(num, 4);
     };
 
+    // Steps
     addAndMakeVisible(cmbSteps);
-    // Added "64" to the list
     cmbSteps.addItemList({"4", "8", "12", "16", "32", "64"}, 1);
     cmbSteps.setSelectedId(4, juce::dontSendNotification);
+    cmbSteps.onChange = [this] {
+      rebuildSteps(cmbSteps.getText().getIntValue());
+    };
 
     // Page Button
     addAndMakeVisible(btnPage);
@@ -85,31 +130,33 @@ public:
       currentPage = (currentPage + 1) % maxPages;
       updatePageButton();
       resized();
-      repaint(); // For dynamic text
+      repaint();
     };
     btnPage.setVisible(false);
 
-    // Rec Button
-    addAndMakeVisible(btnRec);
-    addAndMakeVisible(btnExport); // Added
-    btnRec.setClickingTogglesState(true);
-    btnRec.setColour(juce::TextButton::buttonOnColourId, juce::Colours::red);
+    // --- BUTTON CONFIGURATION (Color Toggles) ---
+    auto configBtn = [this](juce::TextButton &b, juce::Colour onCol,
+                            juce::String tip) {
+      addAndMakeVisible(b);
+      b.setClickingTogglesState(true);
+      b.setColour(juce::TextButton::buttonOnColourId, onCol);
+      b.setTooltip(tip);
+    };
+
+    configBtn(btnRec, juce::Colours::red, "Enable Recording");
+    configBtn(btnCountIn, juce::Colours::orange, "1 Bar Count-In");
+    configBtn(btnForceGrid, juce::Colours::cyan,
+              "Force Strict Grid (No Swing)");
+    configBtn(btnSwing, juce::Colours::cyan.darker(0.3f), "Swing Toggle");
+
+    addAndMakeVisible(btnExport);
     btnRec.onClick = [this] { isRecording = btnRec.getToggleState(); };
-
-    cmbSteps.onChange = [this] {
-      rebuildSteps(cmbSteps.getText().getIntValue());
+    btnExport.onClick = [this] {
+      if (onExportRequest)
+        onExportRequest();
     };
 
-    addAndMakeVisible(cmbMode);
-    cmbMode.addItemList({"Time", "Loop", "Roll"}, 1);
-    // User requested Loop as default. Index 1=Time, 2=Loop, 3=Roll
-    cmbMode.setSelectedId(2, juce::dontSendNotification);
-    currentMode = Mode::Loop;
-    cmbMode.onChange = [this] {
-      currentMode = (Mode)(cmbMode.getSelectedId() - 1);
-    };
-
-    // Output Channel Dropdown
+    // Output Channel
     addAndMakeVisible(cmbSeqOutCh);
     for (int i = 1; i <= 16; ++i)
       cmbSeqOutCh.addItem(juce::String(i), i);
@@ -118,36 +165,39 @@ public:
       outputChannel = cmbSeqOutCh.getSelectedId();
     };
 
+    // Mode
+    addAndMakeVisible(cmbMode);
+    cmbMode.addItemList({"Time", "Loop", "Roll"}, 1);
+    cmbMode.setSelectedId(2, juce::dontSendNotification);
+    currentMode = Mode::Loop;
+    cmbMode.onChange = [this] {
+      currentMode = (Mode)(cmbMode.getSelectedId() - 1);
+    };
+
+    // Slider
     noteSlider.setSliderStyle(juce::Slider::LinearBar);
     noteSlider.setRange(0, 127, 1);
     noteSlider.setValue(60);
     addAndMakeVisible(noteSlider);
 
+    // Roll Buttons
     auto setupRoll = [&](juce::TextButton &b, int div) {
-      b.setClickingTogglesState(false); // Momentary
-      // Drag-to-select logic (Basic implementation: check mouse state in timer
-      // or MainComponent? Actually, Juce buttons handle drag if we override
-      // functionality, but simplistic way: The user asked for "drag to select"
-      // to prevent clipping. For now, ensuring they don't lock is key. We will
-      // enhance the checking in MainComponent or here if needed.
+      addAndMakeVisible(b);
+      b.setClickingTogglesState(false);
       b.setColour(juce::TextButton::buttonOnColourId, Theme::accent);
       b.onStateChange = [this, &b, div] {
-        // Fix: Ensure we don't get stuck if mouse drag exits
         if (b.isDown())
           activeRollDiv = div;
-        else if (activeRollDiv == div) // Only reset if WE were the active one
+        else if (activeRollDiv == div)
           activeRollDiv = 0;
       };
-      addAndMakeVisible(b);
     };
-
     setupRoll(btnRoll4, 4);
     setupRoll(btnRoll8, 8);
     setupRoll(btnRoll16, 16);
     setupRoll(btnRoll32, 32);
 
-    rebuildSteps(16);
-
+    // Reset & Clear
     btnClear.onClick = [this] { clearSteps(); };
     addAndMakeVisible(btnClear);
 
@@ -155,33 +205,41 @@ public:
     btnResetCH.setColour(juce::TextButton::buttonColourId,
                          juce::Colours::darkred.withAlpha(0.5f));
     addAndMakeVisible(btnResetCH);
+
+    addAndMakeVisible(btnClearAll);
+    btnClearAll.setTooltip("Reset ALL pitch and velocity data");
+    btnClearAll.setColour(juce::TextButton::buttonColourId,
+                          juce::Colours::darkred);
+    btnClearAll.onClick = [this] { clearAllSequencerData(); };
+
+    // Swing Slider
+    addAndMakeVisible(swingSlider);
+    swingSlider.setRange(0.0, 100.0, 1.0);
+    swingSlider.setValue(0.0);
+    swingSlider.setSliderStyle(juce::Slider::LinearBar);
+    swingSlider.setTextValueSuffix("% Swing");
+
+    rebuildSteps(16);
   }
 
+  // ==============================================================================
+  // LOGIC
+  // ==============================================================================
   void updatePageButton() {
-    btnPage.setButtonText("Page " + juce::String(currentPage + 1));
-  }
-
-  std::vector<int> stepNotes;
-
-  void addTrack(int ch, int prog, juce::String name) {
-    activeTracks.push_back({ch, prog, name});
-    repaint();
+    btnPage.setButtonText(juce::String(currentPage + 1));
+    btnPage.setTooltip("Sequencer Page " + juce::String(currentPage + 1));
   }
 
   void rebuildSteps(int count) {
     stepButtons.clear();
     numSteps = count;
 
-    // Resize notes vector and preserve existing if possible, or fill with
-    // default
     int defaultNote = (int)noteSlider.getValue();
-    if (stepNotes.size() < numSteps) {
-      stepNotes.resize(numSteps, defaultNote);
-    } else if (stepNotes.size() > numSteps) {
-      stepNotes.resize(numSteps);
-    }
+    if (stepData.size() < (size_t)numSteps)
+      stepData.resize(numSteps, {defaultNote, 0.78f});
+    else if (stepData.size() > (size_t)numSteps)
+      stepData.resize(numSteps);
 
-    // Auto-reset page if we shrink
     if (numSteps <= 16) {
       currentPage = 0;
       btnPage.setVisible(false);
@@ -194,16 +252,11 @@ public:
       auto *b = stepButtons.add(new juce::ToggleButton());
       b->setColour(juce::ToggleButton::tickColourId, Theme::accent);
       b->setButtonText(juce::String(i + 1));
-      // Capture Note Logic:
-      // When clicked ON: Capture current noteSlider value.
-      // When clicked OFF: No change (logic handles clearing elsewhere if
-      // needed) BUT: ToggleButton onClick happens AFTER state change usually.
       b->onClick = [this, i] {
         if (stepButtons[i]->getToggleState()) {
-          // If turning ON, snap to current slider value
-          int note = (int)noteSlider.getValue();
-          if (i < stepNotes.size())
-            stepNotes[i] = note;
+          if (!isRecording) {
+            stepData[i].note = (int)noteSlider.getValue();
+          }
         }
       };
       addAndMakeVisible(b);
@@ -218,23 +271,26 @@ public:
     }
   }
 
-  void recordNoteOnStep(int step, int note) {
+  void recordNoteOnStep(int step, int note, float velocity) {
     if (step >= 0 && step < stepButtons.size()) {
       stepButtons[step]->setToggleState(true, juce::dontSendNotification);
-      if (step < stepNotes.size()) {
-        stepNotes[step] = note;
+      // Ensure stepData is large enough
+      if (step < (int)stepData.size()) {
+        stepData[step].note = note;
+        stepData[step].velocity = velocity;
       }
-      // Update Root Slider to match incoming note for feedback
-      juce::MessageManager::callAsync([this, note] {
-        noteSlider.setValue(note, juce::dontSendNotification);
-      });
+      if (btnLinkRoot.getToggleState()) {
+        juce::MessageManager::callAsync([this, note] {
+          noteSlider.setValue(note, juce::dontSendNotification);
+        });
+      }
     }
   }
 
   int getStepNote(int step) {
-    if (step >= 0 && step < stepNotes.size())
-      return stepNotes[step];
-    return (int)noteSlider.getValue();
+    if (step >= 0 && step < (int)stepData.size())
+      return stepData[step].note;
+    return 0;
   }
 
   bool isStepActive(int step) {
@@ -243,48 +299,57 @@ public:
     return false;
   }
 
-  Mode getMode() const { return currentMode; }
-
+  // ==============================================================================
+  // LAYOUT & PAINT
+  // ==============================================================================
   void resized() override {
     auto r = getLocalBounds().reduced(2);
-    auto header = r.removeFromTop(30);
-    lblTitle.setBounds(header.removeFromLeft(70));
-    cmbSteps.setBounds(header.removeFromLeft(50));
-    cmbTimeSig.setBounds(header.removeFromLeft(50).reduced(2, 0));
 
-    cmbMode.setBounds(
-        header.removeFromLeft(70).reduced(5, 0)); // Added Mode Menu
+    // 1. HEADER ROW (Link, Steps, TimeSig, Mode, Rolls, Ch, Note, Clear)
+    auto header = r.removeFromTop(28);
 
-    // Page Button logic
-    if (numSteps > 16) {
-      btnPage.setBounds(header.removeFromLeft(60).reduced(5, 0));
+    // Left Group
+    btnLinkRoot.setBounds(header.removeFromLeft(75).reduced(2));
+    cmbSteps.setBounds(header.removeFromLeft(45).reduced(1));
+    cmbTimeSig.setBounds(header.removeFromLeft(45).reduced(1));
+    cmbMode.setBounds(header.removeFromLeft(50).reduced(1));
+
+    // Mid Group (Rolls)
+    auto midHeader = header.removeFromLeft(140).reduced(5, 0);
+    int rw = midHeader.getWidth() / 4;
+    btnRoll4.setBounds(midHeader.removeFromLeft(rw).reduced(1));
+    btnRoll8.setBounds(midHeader.removeFromLeft(rw).reduced(1));
+    btnRoll16.setBounds(midHeader.removeFromLeft(rw).reduced(1));
+    btnRoll32.setBounds(midHeader.removeFromLeft(rw).reduced(1));
+
+    // Right Group
+    btnClear.setBounds(header.removeFromRight(55).reduced(2));
+    noteSlider.setBounds(header.removeFromRight(45).reduced(1));
+    cmbSeqOutCh.setBounds(header.removeFromRight(45).reduced(1));
+
+    r.removeFromTop(5); // Spacer
+
+    // 3. BOTTOM FOOTER ROW
+    auto bottomRow = r.removeFromBottom(28);
+
+    // Left to Right: Swing -> CountIn -> Rec -> Export -> Grid -> ClearAll ->
+    // ResetCH
+    swingSlider.setBounds(bottomRow.removeFromLeft(85).reduced(2));
+    btnCountIn.setBounds(bottomRow.removeFromLeft(40).reduced(2));
+    btnRec.setBounds(bottomRow.removeFromLeft(40).reduced(2));
+    btnExport.setBounds(bottomRow.removeFromLeft(55).reduced(2));
+    btnForceGrid.setBounds(bottomRow.removeFromLeft(50).reduced(2));
+    btnClearAll.setBounds(bottomRow.removeFromLeft(70).reduced(2));
+
+    if (btnPage.isVisible()) {
+      btnPage.setBounds(bottomRow.removeFromLeft(35).reduced(2));
     }
 
-    btnClear.setBounds(header.removeFromRight(50).reduced(2));
-    noteSlider.setBounds(header.removeFromRight(50).reduced(2, 0));
-    cmbSeqOutCh.setBounds(
-        header.removeFromRight(50).reduced(2, 0)); // Left of Note Slider
+    btnResetCH.setBounds(bottomRow.removeFromRight(75).reduced(2));
 
-    // Export Button (Wait, user wants swap: Swap Rec/Export)
-    // Previous: Rec = 40, Export = 50.
-    // New: Export = 60, Rec = 55. Widen and move right.
-    btnRec.setBounds(header.removeFromRight(55).reduced(2));
-    btnExport.setBounds(header.removeFromRight(60).reduced(2));
-
-    auto rollRow = r.removeFromTop(25);
-    int rw = rollRow.getWidth() / 4;
-    btnRoll4.setBounds(rollRow.removeFromLeft(rw).reduced(1));
-    btnRoll8.setBounds(rollRow.removeFromLeft(rw).reduced(1));
-    btnRoll16.setBounds(rollRow.removeFromLeft(rw).reduced(1));
-    btnRoll32.setBounds(rollRow.removeFromLeft(rw).reduced(1));
-
-    r.removeFromTop(10); // Gap
-
-    // Beat steps - Logic for Paging
+    // 4. BEAT STEP GRID
     int visibleCount = std::min(numSteps, 16);
     int startIdx = currentPage * 16;
-
-    // Hide all first
     for (auto *b : stepButtons)
       b->setVisible(false);
 
@@ -295,62 +360,35 @@ public:
         if (realIdx < stepButtons.size()) {
           auto *b = stepButtons[realIdx];
           b->setVisible(true);
-          b->setBounds(i * sw, r.getY(), sw, r.getHeight() - 10);
+          b->setBounds(r.getX() + (i * sw), r.getY(), sw, r.getHeight() - 5);
           b->setButtonText(juce::String(realIdx + 1));
         }
       }
     }
-
-    // Reset CH button - Very small, bottom right
-    btnResetCH.setBounds(
-        getLocalBounds().removeFromRight(50).removeFromBottom(15).reduced(2));
   }
 
   void paint(juce::Graphics &g) override {
     g.fillAll(Theme::bgDark);
 
-    if (currentPage >= 0 && numSteps > 16) {
-      g.setColour(juce::Colours::white.withAlpha(0.6f));
-      g.setFont(juce::FontOptions(12.0f).withStyle("Bold"));
-      g.drawText("PAGE " + juce::String(currentPage + 1), 5, getHeight() - 15,
-                 50, 15, juce::Justification::bottomLeft);
-    }
-
-    // Visual Markers every 4 steps (1 beat)
-    if (stepButtons.size() > 0) {
-      // Based on VISIBLE buttons
-      int visibleCount = std::min(numSteps, 16);
-      auto r = getLocalBounds().reduced(2);
-      int topY = r.getY() + 35 + 25 + 10; // Header + Roll + Gap approx
-      int h = r.getHeight() - (35 + 25 + 10) - 10;
-
-      if (h > 0 && visibleCount > 0) {
-        int sw = r.getWidth() / visibleCount;
-
-        for (int i = 0; i < visibleCount; ++i) {
-          // We want markers AFTER step 4, 8, 12 (0-indexed: 3, 7, 11)
-          // But "user changes via drop down menu... we need every 4th step"
-          // So i=3, i=7, i=11.
-          // "Do not put a visual step indicator at the end of the step
-          // sequence" -> not at i=15
-
-          if ((i + 1) % 4 == 0 && (i + 1) < visibleCount) {
-            g.setColour(juce::Colours::white.withAlpha(0.15f));
-            int x = (i + 1) * sw;
-            g.fillRect(x - 1, topY, 2, h); // Draw a subtle vertical bar
-          }
-        }
+    // Draw Beat Group Lines (Every 4)
+    int visibleCount = std::min(numSteps, 16);
+    if (visibleCount > 0) {
+      int sw = getWidth() / visibleCount;
+      g.setColour(juce::Colours::white.withAlpha(0.1f));
+      // Approx heights based on resized()
+      int topY = 30 + 25 + 10;
+      int bottomY = getHeight() - 25;
+      for (int i = 1; i < visibleCount; ++i) {
+        if (i % 4 == 0)
+          g.drawVerticalLine(i * sw, (float)topY, (float)bottomY);
       }
     }
 
-    // Playhead Highlight
-    // Needs to handle Paging: only draw if currentStep is in visible range
+    // Highlight Active Step
     int startIdx = currentPage * 16;
     int endIdx = startIdx + 16;
-
     if (stepButtons.size() > 0 && currentStep >= startIdx &&
         currentStep < endIdx && currentStep < stepButtons.size()) {
-
       auto r = stepButtons[currentStep]->getBounds();
       g.setColour(juce::Colours::white.withAlpha(0.2f));
       g.fillRect(r);
@@ -359,20 +397,53 @@ public:
     }
   }
 
-  void paintOverChildren(juce::Graphics &g) override {
-    int startIdx = currentPage * 16;
-    int endIdx = startIdx + 16;
+  void exportToMidi(juce::File file) {
+    if (stepButtons.isEmpty())
+      return;
+    juce::MidiMessageSequence seq;
+    int ppq = 960;
+    double ticksPerStep = ppq / 4.0;
 
-    if (stepButtons.size() > 0 && currentStep >= startIdx &&
-        currentStep < endIdx && currentStep < stepButtons.size()) {
-      auto r = stepButtons[currentStep]->getBounds();
-      g.setColour(juce::Colours::white.withAlpha(0.3f));
-      g.fillRect(r.reduced(1));
+    int num = 4;
+    int id = cmbTimeSig.getSelectedId();
+    if (id == 2)
+      num = 3;
+    else if (id == 3)
+      num = 5;
+    seq.addEvent(juce::MidiMessage::timeSignatureMetaEvent(num, 4), 0);
+
+    // Use btnForceGrid state instead of old btnQuantize
+    double swingAmount =
+        btnForceGrid.getToggleState() ? 0.0 : (swingSlider.getValue() / 100.0);
+    double swingOffset = (ticksPerStep * 0.5) * swingAmount;
+
+    for (int i = 0; i < numSteps; ++i) {
+      if (i < stepButtons.size() && stepButtons[i]->getToggleState()) {
+        int n_val = stepData[i].note;
+        float v_val = stepData[i].velocity;
+
+        double start = (double)i * ticksPerStep;
+        if (i % 2 != 0)
+          start += swingOffset;
+
+        seq.addEvent(juce::MidiMessage::noteOn(outputChannel, n_val, v_val),
+                     start);
+        seq.addEvent(juce::MidiMessage::noteOff(outputChannel, n_val),
+                     start + (ticksPerStep * 0.9));
+      }
     }
-  }
+    double totalLoopTicks = numSteps * ticksPerStep;
+    seq.addEvent(juce::MidiMessage::endOfTrack(), totalLoopTicks);
+    seq.updateMatchedPairs();
 
-  void clearSteps() {
-    for (auto *b : stepButtons)
-      b->setToggleState(false, juce::dontSendNotification);
+    juce::MidiFile midiFile;
+    midiFile.setTicksPerQuarterNote(ppq);
+    midiFile.addTrack(seq);
+
+    if (file.existsAsFile())
+      file.deleteFile();
+    juce::FileOutputStream stream(file);
+    if (stream.openedOk())
+      midiFile.writeTo(stream);
   }
 };

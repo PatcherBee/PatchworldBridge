@@ -11,7 +11,11 @@ _CPack_Packages/
 CPackConfig.cmake
 CPackSourceConfig.cmake
 
-
+build.bat
+do_build.bat
+build_vs_final/
+/exe_list.txt
+/exe_list_utf8.txt
 build_debug/
 build_final/
 build_vs/

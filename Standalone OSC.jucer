@@ -5,6 +5,8 @@
   <MAINGROUP id="umOpkX" name="PatchworldBridge">
     <GROUP id="{397D688E-3610-4AC6-3CBD-6EECCAF53C66}" name="Source">
       <GROUP id="{577FF634-CB2C-28B2-E39F-A3CB44B602E0}" name="Components">
+        <FILE id="kcM7d9" name="PlaybackEngine.h" compile="0" resource="0"
+              file="Source/Components/PlaybackEngine.h"/>
         <FILE id="vnn9bE" name="MidiLearnOverlay.h" compile="0" resource="0"
               file="Source/Components/MidiLearnOverlay.h"/>
         <FILE id="QhhLqH" name="MidiMappingManager.h" compile="0" resource="0"

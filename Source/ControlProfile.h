@@ -1,7 +1,9 @@
+#pragma once
 #include <JuceHeader.h>
+#include <map>
 
 struct ControlProfile {
-  juce::String name = "Custom Profile"; // Added name field
+  juce::String name = "Custom Profile";
   int ccCutoff = 74;
   int ccResonance = 71;
   int ccAttack = 73;
@@ -10,8 +12,8 @@ struct ControlProfile {
   int ccPan = 10;
 
   // Transport & Options
-  bool isTransportLink = false; // If true, respects Start/Stop/Continue
-  int ccPlay = -1;              // -1 if relying on Realtime System Messages
+  bool isTransportLink = false;
+  int ccPlay = -1;
   int ccStop = -1;
   int ccRecord = -1;
 
@@ -29,7 +31,7 @@ struct ControlProfile {
     p.ccRelease = 72;
     p.ccLevel = 7;
     p.ccPan = 10;
-    p.isTransportLink = true; // JD-Xi sends realtime
+    p.isTransportLink = true;
     return p;
   }
 
@@ -38,7 +40,7 @@ struct ControlProfile {
     p.name = "Generic Keyboard";
     p.ccLevel = 7;
     p.ccPan = 10;
-    p.isTransportLink = true; // Expect Realtime Start/Stop
+    p.isTransportLink = true;
     return p;
   }
 

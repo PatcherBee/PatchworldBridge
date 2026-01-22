@@ -18,12 +18,33 @@ struct Theme {
     return juce::Colour::fromHSV(
         ((ch - 1) * 0.618f) - std::floor((ch - 1) * 0.618f), 0.7f, 0.95f, 1.0f);
   }
+
+  // NEW: Helper to draw stylish panels with gradients and glass highlights
+  static void drawStylishPanel(juce::Graphics &g, juce::Rectangle<float> area,
+                               juce::Colour baseColour, float cornerSize) {
+    // 1. Draw the Main Gradient (Darker at the bottom for depth)
+    juce::ColourGradient cg(baseColour.brighter(0.05f), area.getX(),
+                            area.getY(), baseColour.darker(0.15f), area.getX(),
+                            area.getBottom(), false);
+    g.setGradientFill(cg);
+    g.fillRoundedRectangle(area, cornerSize);
+
+    // 2. Draw a subtle "Glass" highlight at the top
+    g.setColour(juce::Colours::white.withAlpha(0.05f));
+    g.fillRoundedRectangle(area.removeFromTop(area.getHeight() * 0.4f),
+                           cornerSize);
+
+    // 3. Draw a stylish thin outline
+    g.setColour(baseColour.brighter(0.2f).withAlpha(0.4f));
+    g.drawRoundedRectangle(area.expanded(0, area.getHeight() * 0.4f),
+                           cornerSize, 1.2f);
+  }
 };
 
-inline juce::Colour Theme::bgDark = juce::Colour::fromString("FF121212");
-inline juce::Colour Theme::bgPanel = juce::Colour::fromString("FF1E1E1E");
-inline juce::Colour Theme::accent = juce::Colour::fromString("FF007ACC");
-inline juce::Colour Theme::grid = juce::Colour::fromString("FF333333");
+inline juce::Colour Theme::bgDark = juce::Colour::fromString("FF0A0A14");
+inline juce::Colour Theme::bgPanel = juce::Colour::fromString("FF1A1A2E");
+inline juce::Colour Theme::accent = juce::Colour::fromString("FF00E5FF");
+inline juce::Colour Theme::grid = juce::Colour::fromString("FF2A2A4A");
 inline juce::Colour Theme::text = juce::Colours::white;
 
 struct PhaseVisualizer : public juce::Component {

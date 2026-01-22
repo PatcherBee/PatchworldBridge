@@ -1,34 +1,34 @@
 /*
   ==============================================================================
     Source/MainComponent.h
-    Status: FIXED (Removed inline bodies to prevent double-definition errors)
+    Status: FIXED (Removed Duplicate btnExtSync)
   ==============================================================================
 */
 #pragma once
 
-#include "ControlProfile.h"
 #include <JuceHeader.h>
 #include <ableton/Link.hpp>
 #include <memory>
+
+#include "ControlProfile.h"
 
 namespace juce {
 class FileChooser;
 }
 
-// Use flat includes if files are in the same directory
 #include "Common.h"
 #include "Components/Controls.h"
 #include "Components/MidiLearnOverlay.h"
 #include "Components/MidiMappingManager.h"
 #include "Components/MidiScheduler.h"
 #include "Components/Mixer.h"
+#include "Components/PlaybackEngine.h"
 #include "Components/Sequencer.h"
 #include "Components/Tools.h"
 #include "SubComponents.h"
 
 class MainComponent : public juce::AudioAppComponent,
                       public juce::Timer,
-                      public juce::HighResolutionTimer,
                       public juce::MidiKeyboardState::Listener,
                       public juce::OSCReceiver::Listener<
                           juce::OSCReceiver::MessageLoopCallback>,
@@ -49,9 +49,10 @@ public:
   void handleAsyncUpdate() override;
   void processMidiQueue(int start, int size);
   void handleMidiClock(const juce::MidiMessage &m);
+  double getDurationFromVelocity(float velocity0to1);
 
   //==============================================================================
-  //Standard JUCE Lifecycle
+  // Standard JUCE Lifecycle
   void paint(juce::Graphics &g) override;
   void resized() override;
 
@@ -71,7 +72,9 @@ public:
                                  const juce::MidiMessage &message) override;
 
   void timerCallback() override;
-  void hiResTimerCallback() override;
+  // Sync / Playback Logic Helpers (V5.2)
+  void updateSequencerStep(double masterBeat, double quantum);
+  void handleSequenceEnd(double masterBeat);
 
   // Slider Listener (Declarations ONLY)
   void sliderValueChanged(juce::Slider *slider) override;
@@ -91,11 +94,10 @@ public:
 
 private:
   // Logic & Sync
-  ableton::Link *link = nullptr; // Raw pointer to match existing .cpp logic
   juce::UndoManager undoManager;
   juce::ValueTree parameters{"Params"};
   juce::CachedValue<double> bpmVal;
-
+  PlaybackEngine engine;
   // Internal Objects
   juce::OSCReceiver oscReceiver;
   juce::OSCSender oscSender;
@@ -114,6 +116,10 @@ private:
   OscAddressConfig oscConfig;
   ControlPage controlPage;
   MidiIndicator midiInLight, midiOutLight;
+
+  // FIXED: Declared only once
+  void toggleExtSync();
+  juce::TextButton btnExtSync{"Ext"};
 
   // Viewports and Overlays
   juce::Viewport oscViewport, helpViewport, mixerViewport;
@@ -136,16 +142,20 @@ private:
   juce::TextEditor txtVol1Osc, txtVol2Osc, edIp, edPOut, edPIn;
   juce::TextButton btnVol1CC, btnVol2CC, btnLinkToggle, btnTapTempo, btnPanic,
       btnDash, btnCtrl, btnOscCfg, btnHelp, btnMidiScaling;
+
+  // NOTE: btnExtSync Removed from here to prevent redefinition (It is above)
+
   juce::ToggleButton btnMidiScalingToggle{"Scale 0-127"}; // New Toggle
   juce::TextButton btnPlay, btnStop, btnPrev, btnSkip, btnClearPR, btnResetBPM,
       btnConnect, btnPreventBpmOverride, btnBlockMidiOut, btnGPU, btnArp,
-      btnArpSync, btnArpLatch;
+      btnArpSync, btnArpLatch, btnArpBlock;
   juce::TextButton btnPrOctUp, btnPrOctDown, btnSplit, btnRetrigger,
       btnMidiThru, btnMidiClock, btnMidiLearn,
       btnResetLearned; // Added Reset Learned
   juce::ToggleButton btnResetMixerOnLoad{"Reset Mixer on Track Load"};
   juce::TextButton btnSaveProfile{"Save Profile"};
   juce::TextButton btnLoadProfile{"Load Profile"};
+  juce::TextButton btnDeleteProfile{"X"}; // New Delete Button
   std::unique_ptr<juce::FileChooser> fileChooser;
 
   PhaseVisualizer phaseVisualizer;
@@ -155,12 +165,12 @@ private:
   // Logic Variables
   bool isSimpleMode = false;
   bool isOscConnected = false;
+  bool isMidiLearnMode = false;
   bool isPlaying = false;
   bool pendingSyncStart = false;
   bool isHandlingOsc = false;
   bool startupRetryActive = true;
   bool isFullRangeMidi = false;
-  bool isMidiLearnMode = false;
   juce::String lastClickedControlID = "";
   juce::Component *lastClickedComponent = nullptr;
   bool isMidiScaling127 =
@@ -168,7 +178,6 @@ private:
   int blockMode = 0; // 0=Off, 1=Block All, 2=Block Playback Only
 
   double quantum = 4.0;
-  double transportStartBeat = 0.0;
   double beatsPlayedOnPause = 0.0;
   double lastProcessedBeat = -1.0;
   double baseBpm = 120.0;
@@ -204,9 +213,9 @@ private:
   int currentArpIndex = 0;
   int lastReceivedCC[17] = {0}; // Track last CC for /chXcv
 
-  MidiScheduler midiScheduler;
   std::vector<int> noteArrivalOrder;
   juce::Array<int> heldNotes;
+  int numFingersDown = 0; // Added for Arp Latch logic
 
   // ComboBoxes
   juce::ComboBox cmbQuantum, cmbMidiIn, cmbMidiOut, cmbMidiCh, cmbArpPattern,
@@ -215,7 +224,7 @@ private:
   juce::Label lblClockOffset;
 
   MidiMappingManager mappingManager;
-  std::unique_ptr<MidiLearnOverlay> learnOverlay;
+  MidiLearnOverlay midiLearnOverlay;
 
   enum ClockMode { Smooth, PhaseLocked };
   ClockMode clockMode = Smooth;
@@ -227,6 +236,8 @@ private:
   void applyControlProfile(const ControlProfile &p);
 
   // Profile Management
+  void saveNewControllerProfile();
+  void deleteSelectedProfile();
   void updateProfileComboBox();
   void loadCustomProfile(juce::File f);
   void saveProfile(const juce::File &file); // Legacy single-profile save
@@ -250,21 +261,18 @@ private:
   juce::String getLocalIPAddress();
   void setParameterValue(juce::String paramID,
                          float normValue); // Bridge for Mapping
-  double getDurationFromVelocity(float velocity0to1);
   int matchOscChannel(const juce::String &pattern,
                       const juce::String &incoming);
   void sendSplitOscMessage(const juce::MidiMessage &m,
                            int overrideChannel = -1);
-  void updateSequencerStep(double currentBeat, double quantum);
 
   // Snapshot/Undo members
   void takeSnapshot();
-
-  std::unique_ptr<juce::FileChooser> fc; // Added for async file choosing
   void performUndo();
   void performRedo();
-
   void launchMidiExport();
+
+  std::unique_ptr<juce::FileChooser> fc; // Added for async file choosing
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
