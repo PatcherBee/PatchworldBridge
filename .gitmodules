@@ -5,3 +5,6 @@
 [submodule "link"]
 	path = link
 	url = https://github.com/Ableton/link.git
+[submodule "libs/gainput"]
+	path = libs/gainput
+	url = https://github.com/jkuhlmann/gainput.git

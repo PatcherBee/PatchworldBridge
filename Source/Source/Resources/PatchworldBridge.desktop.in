@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Patchworld Bridge
+Comment=MIDI to OSC Bridge for Patchworld
+Exec=PatchworldBridge
+Icon=patchworld-bridge
+Terminal=false
+Categories=AudioVideo;Audio;

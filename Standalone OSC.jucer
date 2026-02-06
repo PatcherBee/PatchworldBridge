@@ -4,29 +4,686 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" companyName="BeeTeam">
   <MAINGROUP id="umOpkX" name="PatchworldBridge">
     <GROUP id="{397D688E-3610-4AC6-3CBD-6EECCAF53C66}" name="Source">
-      <GROUP id="{577FF634-CB2C-28B2-E39F-A3CB44B602E0}" name="Components">
-        <FILE id="kcM7d9" name="PlaybackEngine.h" compile="0" resource="0"
-              file="Source/Components/PlaybackEngine.h"/>
-        <FILE id="vnn9bE" name="MidiLearnOverlay.h" compile="0" resource="0"
-              file="Source/Components/MidiLearnOverlay.h"/>
-        <FILE id="QhhLqH" name="MidiMappingManager.h" compile="0" resource="0"
-              file="Source/Components/MidiMappingManager.h"/>
-        <FILE id="fObiwl" name="MidiScheduler.h" compile="0" resource="0" file="Source/Components/MidiScheduler.h"/>
-        <FILE id="cQNkdw" name="Common.h" compile="0" resource="0" file="Source/Components/Common.h"/>
-        <FILE id="pTs6N3" name="Controls.h" compile="0" resource="0" file="Source/Components/Controls.h"/>
-        <FILE id="a1S8Oo" name="Mixer.h" compile="0" resource="0" file="Source/Components/Mixer.h"/>
-        <FILE id="QZ99eK" name="Sequencer.h" compile="0" resource="0" file="Source/Components/Sequencer.h"/>
-        <FILE id="ZyTVQb" name="Tools.h" compile="0" resource="0" file="Source/Components/Tools.h"/>
+      <GROUP id="{2AFB836F-B65E-6834-0309-6A64F1F222E3}" name="Audio">
+        <FILE id="DbWlHo" name="AudioEngine.cpp" compile="1" resource="0" file="Source/Audio/AudioEngine.cpp"/>
+        <FILE id="DaTX51" name="AudioEngine.h" compile="0" resource="0" file="Source/Audio/AudioEngine.h"/>
+        <FILE id="msltgf" name="AudioMemoryPool.h" compile="0" resource="0"
+              file="Source/Audio/AudioMemoryPool.h"/>
+        <FILE id="JbdKf2" name="ChordDetector.h" compile="0" resource="0" file="Source/Audio/ChordDetector.h"/>
+        <FILE id="Vf0AYa" name="ClockSmoother.cpp" compile="1" resource="0"
+              file="Source/Audio/ClockSmoother.cpp"/>
+        <FILE id="LEhZmy" name="ClockSmoother.h" compile="0" resource="0" file="Source/Audio/ClockSmoother.h"/>
+        <FILE id="AJ2GFi" name="ClockWorker.h" compile="0" resource="0" file="Source/Audio/ClockWorker.h"/>
+        <FILE id="KDavAl" name="CountInManager.h" compile="0" resource="0"
+              file="Source/Audio/CountInManager.h"/>
+        <FILE id="BVfcTB" name="CueManager.h" compile="0" resource="0" file="Source/Audio/CueManager.h"/>
+        <FILE id="SjkCXH" name="EditableNote.h" compile="0" resource="0" file="Source/Audio/EditableNote.h"/>
+        <FILE id="CF9CRV" name="LfoGenerator.h" compile="0" resource="0" file="Source/Audio/LfoGenerator.h"/>
+        <FILE id="hfLI6i" name="LockFreeMidiPipe.h" compile="0" resource="0"
+              file="Source/Audio/LockFreeMidiPipe.h"/>
+        <FILE id="XdKoUk" name="LockFreeRingBuffers.h" compile="0" resource="0"
+              file="Source/Audio/LockFreeRingBuffers.h"/>
+        <FILE id="s61t99" name="LockFreeUtilities.h" compile="0" resource="0"
+              file="Source/Audio/LockFreeUtilities.h"/>
+        <FILE id="vHLekf" name="Metronome.h" compile="0" resource="0" file="Source/Audio/Metronome.h"/>
+        <FILE id="KIljdL" name="MidiRouter.cpp" compile="1" resource="0" file="Source/Audio/MidiRouter.cpp"/>
+        <FILE id="NXqahX" name="MidiRouter.h" compile="0" resource="0" file="Source/Audio/MidiRouter.h"/>
+        <FILE id="efVJum" name="MidiScheduler.cpp" compile="1" resource="0"
+              file="Source/Audio/MidiScheduler.cpp"/>
+        <FILE id="sx7rSV" name="MidiScheduler.h" compile="0" resource="0" file="Source/Audio/MidiScheduler.h"/>
+        <FILE id="duS3jl" name="NoteTracker.h" compile="0" resource="0" file="Source/Audio/NoteTracker.h"/>
+        <FILE id="ji7bIz" name="OscTypes.h" compile="0" resource="0" file="Source/Audio/OscTypes.h"/>
+        <FILE id="CbbtqF" name="PlaybackController.cpp" compile="1" resource="0"
+              file="Source/Audio/PlaybackController.cpp"/>
+        <FILE id="cHEdmO" name="PlaybackController.h" compile="0" resource="0"
+              file="Source/Audio/PlaybackController.h"/>
+        <FILE id="JDalA6" name="SwingProcessor.h" compile="0" resource="0"
+              file="Source/Audio/SwingProcessor.h"/>
       </GROUP>
-      <FILE id="p6A9ua" name="logo.png" compile="0" resource="1" file="logo.png"/>
-      <FILE id="TvI7eR" name="ControlProfile.h" compile="0" resource="0"
-            file="Source/ControlProfile.h"/>
-      <FILE id="HUXqul" name="SubComponents.h" compile="0" resource="0" file="Source/SubComponents.h"/>
-      <FILE id="tsR21D" name="MidiScheduler.h" compile="0" resource="0" file="Source/MidiScheduler.h"/>
-      <FILE id="Ej6Amu" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
-      <FILE id="tkXB53" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
-      <FILE id="jCzUqA" name="MainComponent.cpp" compile="1" resource="0"
-            file="Source/MainComponent.cpp"/>
+      <GROUP id="{71A87603-F6C8-A907-FA36-EF508214EB7F}" name="Core">
+        <FILE id="VZAqQb" name="AppState.h" compile="0" resource="0" file="Source/Core/AppState.h"/>
+        <FILE id="NtZokv" name="AtomicLayout.h" compile="0" resource="0" file="Source/Core/AtomicLayout.h"/>
+        <FILE id="J1b2hR" name="AudioWatchdog.h" compile="0" resource="0" file="Source/Core/AudioWatchdog.h"/>
+        <FILE id="FVk46E" name="BindingService.h" compile="0" resource="0"
+              file="Source/Core/BindingService.h"/>
+        <FILE id="rgajP5" name="BridgeContext.cpp" compile="1" resource="0"
+              file="Source/Core/BridgeContext.cpp"/>
+        <FILE id="Q84te8" name="BridgeContext.h" compile="0" resource="0" file="Source/Core/BridgeContext.h"/>
+        <FILE id="EFG2ES" name="BridgeEventBus.h" compile="0" resource="0"
+              file="Source/Core/BridgeEventBus.h"/>
+        <FILE id="B0aKsV" name="BridgeListener.h" compile="0" resource="0"
+              file="Source/Core/BridgeListener.h"/>
+        <FILE id="pYZXeQ" name="BridgeSettings.h" compile="0" resource="0"
+              file="Source/Core/BridgeSettings.h"/>
+        <FILE id="FgxfKG" name="CommandDispatcher.cpp" compile="1" resource="0"
+              file="Source/Core/CommandDispatcher.cpp"/>
+        <FILE id="RfEm1O" name="CommandDispatcher.h" compile="0" resource="0"
+              file="Source/Core/CommandDispatcher.h"/>
+        <FILE id="AQfiU1" name="CommandQueue.h" compile="0" resource="0" file="Source/Core/CommandQueue.h"/>
+        <FILE id="WqPnEi" name="Common.h" compile="0" resource="0" file="Source/Core/Common.h"/>
+        <FILE id="zxk0Gt" name="ConfigManager.h" compile="0" resource="0" file="Source/Core/ConfigManager.h"/>
+        <FILE id="gYKFwY" name="Constants.h" compile="0" resource="0" file="Source/Core/Constants.h"/>
+        <FILE id="unmMEl" name="CPU_BOTTLENECKS.md" compile="0" resource="1"
+              file="Source/Core/CPU_BOTTLENECKS.md"/>
+        <FILE id="WcPJ0U" name="CPU_ISSUES_AND_SOLUTIONS.md" compile="0" resource="1"
+              file="Source/Core/CPU_ISSUES_AND_SOLUTIONS.md"/>
+        <FILE id="aTGRjP" name="CrashRecovery.h" compile="0" resource="0" file="Source/Core/CrashRecovery.h"/>
+        <FILE id="xmae1n" name="DebugLog.h" compile="0" resource="0" file="Source/Core/DebugLog.h"/>
+        <FILE id="RZNjDM" name="Diagnostics.h" compile="0" resource="0" file="Source/Core/Diagnostics.h"/>
+        <FILE id="fALoUt" name="EventBus.h" compile="0" resource="0" file="Source/Core/EventBus.h"/>
+        <FILE id="gPHBet" name="FileSplitting.md" compile="0" resource="1"
+              file="Source/Core/FileSplitting.md"/>
+        <FILE id="DTeeIO" name="FlightRecorder.h" compile="0" resource="0"
+              file="Source/Core/FlightRecorder.h"/>
+        <FILE id="tTwPEs" name="GLContextManager.h" compile="0" resource="0"
+              file="Source/Core/GLContextManager.h"/>
+        <FILE id="RPpbEr" name="LayoutManager.h" compile="0" resource="0" file="Source/Core/LayoutManager.h"/>
+        <FILE id="eKZMlw" name="LogService.h" compile="0" resource="0" file="Source/Core/LogService.h"/>
+        <FILE id="zVfHxa" name="MenuBuilder.cpp" compile="1" resource="0" file="Source/Core/MenuBuilder.cpp"/>
+        <FILE id="dnnsR0" name="MenuBuilder.h" compile="0" resource="0" file="Source/Core/MenuBuilder.h"/>
+        <FILE id="eEH31w" name="MidiHardwareController.cpp" compile="1" resource="0"
+              file="Source/Core/MidiHardwareController.cpp"/>
+        <FILE id="leKk2L" name="MidiHardwareController.h" compile="0" resource="0"
+              file="Source/Core/MidiHardwareController.h"/>
+        <FILE id="snGzaM" name="MixerViewModel.cpp" compile="1" resource="0"
+              file="Source/Core/MixerViewModel.cpp"/>
+        <FILE id="KopXKH" name="MixerViewModel.h" compile="0" resource="0"
+              file="Source/Core/MixerViewModel.h"/>
+        <FILE id="rRP7wd" name="MVCViewModel.md" compile="0" resource="1" file="Source/Core/MVCViewModel.md"/>
+        <FILE id="RjpN6u" name="NamingConventions.md" compile="0" resource="1"
+              file="Source/Core/NamingConventions.md"/>
+        <FILE id="xWNQiA" name="OPTIMIZATION_OPPORTUNITIES.md" compile="0"
+              resource="1" file="Source/Core/OPTIMIZATION_OPPORTUNITIES.md"/>
+        <FILE id="RvvZik" name="OptimizationCache.h" compile="0" resource="0"
+              file="Source/Core/OptimizationCache.h"/>
+        <FILE id="qxmdjE" name="PlatformGuard.h" compile="0" resource="0" file="Source/Core/PlatformGuard.h"/>
+        <FILE id="wCoxXE" name="ProjectInfo.h" compile="0" resource="0" file="Source/Core/ProjectInfo.h"/>
+        <FILE id="KnIDi9" name="Recommendations.md" compile="0" resource="1"
+              file="Source/Core/Recommendations.md"/>
+        <FILE id="LtzZ7Z" name="ReleaseReadiness.md" compile="0" resource="1"
+              file="Source/Core/ReleaseReadiness.md"/>
+        <FILE id="n96lWi" name="RepaintCoordinator.h" compile="0" resource="0"
+              file="Source/Core/RepaintCoordinator.h"/>
+        <FILE id="eW1378" name="ROADMAP_CONTINUE.md" compile="0" resource="1"
+              file="Source/Core/ROADMAP_CONTINUE.md"/>
+        <FILE id="Dzij8P" name="SequencerViewModel.cpp" compile="1" resource="0"
+              file="Source/Core/SequencerViewModel.cpp"/>
+        <FILE id="nVHPJF" name="SequencerViewModel.h" compile="0" resource="0"
+              file="Source/Core/SequencerViewModel.h"/>
+        <FILE id="IfLDfY" name="ShortcutManager.h" compile="0" resource="0"
+              file="Source/Core/ShortcutManager.h"/>
+        <FILE id="G34j8U" name="SystemController.cpp" compile="1" resource="0"
+              file="Source/Core/SystemController.cpp"/>
+        <FILE id="mdhd9w" name="SystemController.h" compile="0" resource="0"
+              file="Source/Core/SystemController.h"/>
+        <FILE id="mJFRjU" name="ThreadingConfig.h" compile="0" resource="0"
+              file="Source/Core/ThreadingConfig.h"/>
+        <FILE id="IrZTdR" name="ThreadSafeUI.h" compile="0" resource="0" file="Source/Core/ThreadSafeUI.h"/>
+        <FILE id="TtZB6h" name="TimePosition.h" compile="0" resource="0" file="Source/Core/TimePosition.h"/>
+        <FILE id="P9xorG" name="TimerHub.h" compile="0" resource="0" file="Source/Core/TimerHub.h"/>
+        <FILE id="qWuffS" name="TimerMigrationGuide.md" compile="0" resource="1"
+              file="Source/Core/TimerMigrationGuide.md"/>
+        <FILE id="YRmWCR" name="TransportViewModel.cpp" compile="1" resource="0"
+              file="Source/Core/TransportViewModel.cpp"/>
+        <FILE id="ICeWcQ" name="TransportViewModel.h" compile="0" resource="0"
+              file="Source/Core/TransportViewModel.h"/>
+        <FILE id="iejVsG" name="UIWatchdog.h" compile="0" resource="0" file="Source/Core/UIWatchdog.h"/>
+        <FILE id="bmr8kz" name="UserPreferences.h" compile="0" resource="0"
+              file="Source/Core/UserPreferences.h"/>
+      </GROUP>
+      <GROUP id="{1CE0A1E5-632A-1337-0E67-13131B1054E2}" name="Network">
+        <FILE id="rWTZ4M" name="LocalAddresses.h" compile="0" resource="0"
+              file="Source/Network/LocalAddresses.h"/>
+        <FILE id="WauCDR" name="NetworkWorker.cpp" compile="1" resource="0"
+              file="Source/Network/NetworkWorker.cpp"/>
+        <FILE id="VDNqd8" name="NetworkWorker.h" compile="0" resource="0" file="Source/Network/NetworkWorker.h"/>
+        <FILE id="B9QD8A" name="OscAirlock.h" compile="0" resource="0" file="Source/Network/OscAirlock.h"/>
+        <FILE id="mEHpiH" name="OscLookup.h" compile="0" resource="0" file="Source/Network/OscLookup.h"/>
+        <FILE id="vEDLQF" name="OscManager.cpp" compile="1" resource="0" file="Source/Network/OscManager.cpp"/>
+        <FILE id="H9LG3g" name="OscManager.h" compile="0" resource="0" file="Source/Network/OscManager.h"/>
+        <FILE id="cvlMjv" name="OscSchemaSwapper.h" compile="0" resource="0"
+              file="Source/Network/OscSchemaSwapper.h"/>
+        <FILE id="LRf5Nc" name="OscSupport.md" compile="0" resource="1" file="Source/Network/OscSupport.md"/>
+        <FILE id="bfEyT0" name="RtpBluetoothMidi.md" compile="0" resource="1"
+              file="Source/Network/RtpBluetoothMidi.md"/>
+        <FILE id="z416mZ" name="RtpManager.h" compile="0" resource="0" file="Source/Network/RtpManager.h"/>
+      </GROUP>
+      <GROUP id="{57538DF8-4B1B-9CBB-88E5-8E87D8AEBFD6}" name="Resources">
+        <FILE id="HiiheL" name="app.manifest" compile="0" resource="1" file="Source/Resources/app.manifest"/>
+        <FILE id="D0h4Xl" name="PatchworldBridge.desktop.in" compile="0" resource="1"
+              file="Source/Resources/PatchworldBridge.desktop.in"/>
+      </GROUP>
+      <GROUP id="{6A943CAF-8C9F-5AE0-4674-8106D703AA34}" name="Services">
+        <FILE id="kX77EV" name="AutoSaver.h" compile="0" resource="0" file="Source/Services/AutoSaver.h"/>
+        <FILE id="vxtwkA" name="DeferredDeleter.h" compile="0" resource="0"
+              file="Source/Services/DeferredDeleter.h"/>
+        <FILE id="ghFHNm" name="GamepadMapping.h" compile="0" resource="0"
+              file="Source/Services/GamepadMapping.h"/>
+        <FILE id="Czw6ir" name="GamepadService.cpp" compile="1" resource="0"
+              file="Source/Services/GamepadService.cpp"/>
+        <FILE id="aWj6ut" name="GamepadService.h" compile="0" resource="0"
+              file="Source/Services/GamepadService.h"/>
+        <FILE id="SyippW" name="LatencyCalibrator.h" compile="0" resource="0"
+              file="Source/Services/LatencyCalibrator.h"/>
+        <FILE id="FKc8f8" name="LatencyTester.h" compile="0" resource="0" file="Source/Services/LatencyTester.h"/>
+        <FILE id="b2Dhqe" name="MidiDeviceService.cpp" compile="1" resource="0"
+              file="Source/Services/MidiDeviceService.cpp"/>
+        <FILE id="x6X051" name="MidiDeviceService.h" compile="0" resource="0"
+              file="Source/Services/MidiDeviceService.h"/>
+        <FILE id="CMg5cG" name="MidiFilter.h" compile="0" resource="0" file="Source/Services/MidiFilter.h"/>
+        <FILE id="ExDpbG" name="MidiMappingService.cpp" compile="1" resource="0"
+              file="Source/Services/MidiMappingService.cpp"/>
+        <FILE id="Rr17zf" name="MidiMappingService.h" compile="0" resource="0"
+              file="Source/Services/MidiMappingService.h"/>
+        <FILE id="fattgW" name="MidiTransformer.h" compile="0" resource="0"
+              file="Source/Services/MidiTransformer.h"/>
+        <FILE id="Fnt8G7" name="ProfileService.cpp" compile="1" resource="0"
+              file="Source/Services/ProfileService.cpp"/>
+        <FILE id="S81QIL" name="ProfileService.h" compile="0" resource="0"
+              file="Source/Services/ProfileService.h"/>
+        <FILE id="pMF0UK" name="StateRecycler.h" compile="0" resource="0" file="Source/Services/StateRecycler.h"/>
+        <FILE id="TdIzZT" name="VelocityProcessor.h" compile="0" resource="0"
+              file="Source/Services/VelocityProcessor.h"/>
+      </GROUP>
+      <GROUP id="{3336D654-58CE-FD81-D7FD-C3BD2EF7D643}" name="Source">
+        <GROUP id="{03C85531-16B0-1305-10B4-3D02A84BD7C6}" name="Audio">
+          <FILE id="gtFnn6" name="AudioEngine.cpp" compile="1" resource="0" file="Source/Source/Audio/AudioEngine.cpp"/>
+          <FILE id="gXFbzS" name="AudioEngine.h" compile="0" resource="0" file="Source/Source/Audio/AudioEngine.h"/>
+          <FILE id="uhWF8d" name="AudioMemoryPool.h" compile="0" resource="0"
+                file="Source/Source/Audio/AudioMemoryPool.h"/>
+          <FILE id="RK1cLf" name="ChordDetector.h" compile="0" resource="0" file="Source/Source/Audio/ChordDetector.h"/>
+          <FILE id="yWxgnl" name="ClockSmoother.cpp" compile="1" resource="0"
+                file="Source/Source/Audio/ClockSmoother.cpp"/>
+          <FILE id="W9PMNG" name="ClockSmoother.h" compile="0" resource="0" file="Source/Source/Audio/ClockSmoother.h"/>
+          <FILE id="TjWtSN" name="ClockWorker.h" compile="0" resource="0" file="Source/Source/Audio/ClockWorker.h"/>
+          <FILE id="rno61L" name="CountInManager.h" compile="0" resource="0"
+                file="Source/Source/Audio/CountInManager.h"/>
+          <FILE id="wsaLPE" name="CueManager.h" compile="0" resource="0" file="Source/Source/Audio/CueManager.h"/>
+          <FILE id="NNrB5T" name="EditableNote.h" compile="0" resource="0" file="Source/Source/Audio/EditableNote.h"/>
+          <FILE id="OrRajR" name="LfoGenerator.h" compile="0" resource="0" file="Source/Source/Audio/LfoGenerator.h"/>
+          <FILE id="nm7NUo" name="LockFreeMidiPipe.h" compile="0" resource="0"
+                file="Source/Source/Audio/LockFreeMidiPipe.h"/>
+          <FILE id="QCmP2r" name="LockFreeRingBuffers.h" compile="0" resource="0"
+                file="Source/Source/Audio/LockFreeRingBuffers.h"/>
+          <FILE id="P1dYRr" name="LockFreeUtilities.h" compile="0" resource="0"
+                file="Source/Source/Audio/LockFreeUtilities.h"/>
+          <FILE id="sbTsM0" name="Metronome.h" compile="0" resource="0" file="Source/Source/Audio/Metronome.h"/>
+          <FILE id="buBJpX" name="MidiRouter.cpp" compile="1" resource="0" file="Source/Source/Audio/MidiRouter.cpp"/>
+          <FILE id="ylrl0P" name="MidiRouter.h" compile="0" resource="0" file="Source/Source/Audio/MidiRouter.h"/>
+          <FILE id="L1QHtB" name="MidiScheduler.cpp" compile="1" resource="0"
+                file="Source/Source/Audio/MidiScheduler.cpp"/>
+          <FILE id="ohYW2K" name="MidiScheduler.h" compile="0" resource="0" file="Source/Source/Audio/MidiScheduler.h"/>
+          <FILE id="RofT7P" name="NoteTracker.h" compile="0" resource="0" file="Source/Source/Audio/NoteTracker.h"/>
+          <FILE id="ruMg8g" name="OscTypes.h" compile="0" resource="0" file="Source/Source/Audio/OscTypes.h"/>
+          <FILE id="bjjcrJ" name="PlaybackController.cpp" compile="1" resource="0"
+                file="Source/Source/Audio/PlaybackController.cpp"/>
+          <FILE id="uGs6wS" name="PlaybackController.h" compile="0" resource="0"
+                file="Source/Source/Audio/PlaybackController.h"/>
+          <FILE id="zJdd15" name="SwingProcessor.h" compile="0" resource="0"
+                file="Source/Source/Audio/SwingProcessor.h"/>
+        </GROUP>
+        <GROUP id="{FA8ECCEF-6733-1A18-7F7D-2CAFFC2A5B09}" name="Core">
+          <FILE id="Ug9vEi" name="AppState.h" compile="0" resource="0" file="Source/Source/Core/AppState.h"/>
+          <FILE id="Lq8DQr" name="AtomicLayout.h" compile="0" resource="0" file="Source/Source/Core/AtomicLayout.h"/>
+          <FILE id="Oggbuo" name="AudioWatchdog.h" compile="0" resource="0" file="Source/Source/Core/AudioWatchdog.h"/>
+          <FILE id="evKpIy" name="BindingService.h" compile="0" resource="0"
+                file="Source/Source/Core/BindingService.h"/>
+          <FILE id="afSj3Z" name="BridgeContext.cpp" compile="1" resource="0"
+                file="Source/Source/Core/BridgeContext.cpp"/>
+          <FILE id="sXJXm2" name="BridgeContext.h" compile="0" resource="0" file="Source/Source/Core/BridgeContext.h"/>
+          <FILE id="GAn2dP" name="BridgeEventBus.h" compile="0" resource="0"
+                file="Source/Source/Core/BridgeEventBus.h"/>
+          <FILE id="vNMWkl" name="BridgeListener.h" compile="0" resource="0"
+                file="Source/Source/Core/BridgeListener.h"/>
+          <FILE id="Mjw5KH" name="BridgeSettings.h" compile="0" resource="0"
+                file="Source/Source/Core/BridgeSettings.h"/>
+          <FILE id="uwo7Ai" name="CommandDispatcher.cpp" compile="1" resource="0"
+                file="Source/Source/Core/CommandDispatcher.cpp"/>
+          <FILE id="iFz5Iv" name="CommandDispatcher.h" compile="0" resource="0"
+                file="Source/Source/Core/CommandDispatcher.h"/>
+          <FILE id="mddLd3" name="CommandQueue.h" compile="0" resource="0" file="Source/Source/Core/CommandQueue.h"/>
+          <FILE id="WRYNg0" name="Common.h" compile="0" resource="0" file="Source/Source/Core/Common.h"/>
+          <FILE id="gubP6T" name="ConfigManager.h" compile="0" resource="0" file="Source/Source/Core/ConfigManager.h"/>
+          <FILE id="zO21E7" name="Constants.h" compile="0" resource="0" file="Source/Source/Core/Constants.h"/>
+          <FILE id="l93DHq" name="CPU_BOTTLENECKS.md" compile="0" resource="1"
+                file="Source/Source/Core/CPU_BOTTLENECKS.md"/>
+          <FILE id="sEIIvn" name="CPU_ISSUES_AND_SOLUTIONS.md" compile="0" resource="1"
+                file="Source/Source/Core/CPU_ISSUES_AND_SOLUTIONS.md"/>
+          <FILE id="ZHe5Xy" name="CrashRecovery.h" compile="0" resource="0" file="Source/Source/Core/CrashRecovery.h"/>
+          <FILE id="tHYYer" name="DebugLog.h" compile="0" resource="0" file="Source/Source/Core/DebugLog.h"/>
+          <FILE id="aIPy05" name="Diagnostics.h" compile="0" resource="0" file="Source/Source/Core/Diagnostics.h"/>
+          <FILE id="lvst8m" name="EventBus.h" compile="0" resource="0" file="Source/Source/Core/EventBus.h"/>
+          <FILE id="JebrEi" name="FileSplitting.md" compile="0" resource="1"
+                file="Source/Source/Core/FileSplitting.md"/>
+          <FILE id="u3yIVR" name="FlightRecorder.h" compile="0" resource="0"
+                file="Source/Source/Core/FlightRecorder.h"/>
+          <FILE id="PMdjsW" name="GLContextManager.h" compile="0" resource="0"
+                file="Source/Source/Core/GLContextManager.h"/>
+          <FILE id="WvzFII" name="LayoutManager.h" compile="0" resource="0" file="Source/Source/Core/LayoutManager.h"/>
+          <FILE id="THhDEw" name="LogService.h" compile="0" resource="0" file="Source/Source/Core/LogService.h"/>
+          <FILE id="UPf0ey" name="MenuBuilder.cpp" compile="1" resource="0" file="Source/Source/Core/MenuBuilder.cpp"/>
+          <FILE id="tQ9hH7" name="MenuBuilder.h" compile="0" resource="0" file="Source/Source/Core/MenuBuilder.h"/>
+          <FILE id="gnNY1X" name="MidiHardwareController.cpp" compile="1" resource="0"
+                file="Source/Source/Core/MidiHardwareController.cpp"/>
+          <FILE id="E7TXdt" name="MidiHardwareController.h" compile="0" resource="0"
+                file="Source/Source/Core/MidiHardwareController.h"/>
+          <FILE id="dJOIE6" name="MixerViewModel.cpp" compile="1" resource="0"
+                file="Source/Source/Core/MixerViewModel.cpp"/>
+          <FILE id="z1gOrG" name="MixerViewModel.h" compile="0" resource="0"
+                file="Source/Source/Core/MixerViewModel.h"/>
+          <FILE id="hrZQvb" name="MVCViewModel.md" compile="0" resource="1" file="Source/Source/Core/MVCViewModel.md"/>
+          <FILE id="SKuVxN" name="NamingConventions.md" compile="0" resource="1"
+                file="Source/Source/Core/NamingConventions.md"/>
+          <FILE id="fFuzC9" name="OPTIMIZATION_OPPORTUNITIES.md" compile="0"
+                resource="1" file="Source/Source/Core/OPTIMIZATION_OPPORTUNITIES.md"/>
+          <FILE id="zSjyYv" name="OptimizationCache.h" compile="0" resource="0"
+                file="Source/Source/Core/OptimizationCache.h"/>
+          <FILE id="BwFHGP" name="PlatformGuard.h" compile="0" resource="0" file="Source/Source/Core/PlatformGuard.h"/>
+          <FILE id="DNBEQ8" name="ProjectInfo.h" compile="0" resource="0" file="Source/Source/Core/ProjectInfo.h"/>
+          <FILE id="ipTAv4" name="Recommendations.md" compile="0" resource="1"
+                file="Source/Source/Core/Recommendations.md"/>
+          <FILE id="O6KfzA" name="ReleaseReadiness.md" compile="0" resource="1"
+                file="Source/Source/Core/ReleaseReadiness.md"/>
+          <FILE id="F8zKkF" name="RepaintCoordinator.h" compile="0" resource="0"
+                file="Source/Source/Core/RepaintCoordinator.h"/>
+          <FILE id="CiuMBG" name="ROADMAP_CONTINUE.md" compile="0" resource="1"
+                file="Source/Source/Core/ROADMAP_CONTINUE.md"/>
+          <FILE id="sfnV1g" name="SequencerViewModel.cpp" compile="1" resource="0"
+                file="Source/Source/Core/SequencerViewModel.cpp"/>
+          <FILE id="MIqjyz" name="SequencerViewModel.h" compile="0" resource="0"
+                file="Source/Source/Core/SequencerViewModel.h"/>
+          <FILE id="hlAKg9" name="ShortcutManager.h" compile="0" resource="0"
+                file="Source/Source/Core/ShortcutManager.h"/>
+          <FILE id="MM0DlB" name="SystemController.cpp" compile="1" resource="0"
+                file="Source/Source/Core/SystemController.cpp"/>
+          <FILE id="IjQQbC" name="SystemController.h" compile="0" resource="0"
+                file="Source/Source/Core/SystemController.h"/>
+          <FILE id="QyeGVz" name="ThreadingConfig.h" compile="0" resource="0"
+                file="Source/Source/Core/ThreadingConfig.h"/>
+          <FILE id="kXZXox" name="ThreadSafeUI.h" compile="0" resource="0" file="Source/Source/Core/ThreadSafeUI.h"/>
+          <FILE id="OPNH2g" name="TimePosition.h" compile="0" resource="0" file="Source/Source/Core/TimePosition.h"/>
+          <FILE id="HP89UI" name="TimerHub.h" compile="0" resource="0" file="Source/Source/Core/TimerHub.h"/>
+          <FILE id="AYos6w" name="TimerMigrationGuide.md" compile="0" resource="1"
+                file="Source/Source/Core/TimerMigrationGuide.md"/>
+          <FILE id="uvDHIy" name="TransportViewModel.cpp" compile="1" resource="0"
+                file="Source/Source/Core/TransportViewModel.cpp"/>
+          <FILE id="bHt305" name="TransportViewModel.h" compile="0" resource="0"
+                file="Source/Source/Core/TransportViewModel.h"/>
+          <FILE id="LKwIkh" name="UIWatchdog.h" compile="0" resource="0" file="Source/Source/Core/UIWatchdog.h"/>
+          <FILE id="kFq0XT" name="UserPreferences.h" compile="0" resource="0"
+                file="Source/Source/Core/UserPreferences.h"/>
+        </GROUP>
+        <GROUP id="{D2AA0327-F304-0525-DE99-BC105711685C}" name="Network">
+          <FILE id="qJk482" name="LocalAddresses.h" compile="0" resource="0"
+                file="Source/Source/Network/LocalAddresses.h"/>
+          <FILE id="dLj2BP" name="NetworkWorker.cpp" compile="1" resource="0"
+                file="Source/Source/Network/NetworkWorker.cpp"/>
+          <FILE id="sLCtnP" name="NetworkWorker.h" compile="0" resource="0" file="Source/Source/Network/NetworkWorker.h"/>
+          <FILE id="qmBlxo" name="OscAirlock.h" compile="0" resource="0" file="Source/Source/Network/OscAirlock.h"/>
+          <FILE id="jaeztu" name="OscLookup.h" compile="0" resource="0" file="Source/Source/Network/OscLookup.h"/>
+          <FILE id="raNtBh" name="OscManager.cpp" compile="1" resource="0" file="Source/Source/Network/OscManager.cpp"/>
+          <FILE id="w9LCVU" name="OscManager.h" compile="0" resource="0" file="Source/Source/Network/OscManager.h"/>
+          <FILE id="g8H6iY" name="OscSchemaSwapper.h" compile="0" resource="0"
+                file="Source/Source/Network/OscSchemaSwapper.h"/>
+          <FILE id="A9f0nq" name="OscSupport.md" compile="0" resource="1" file="Source/Source/Network/OscSupport.md"/>
+          <FILE id="fGBjuh" name="RtpBluetoothMidi.md" compile="0" resource="1"
+                file="Source/Source/Network/RtpBluetoothMidi.md"/>
+          <FILE id="pO7dHB" name="RtpManager.h" compile="0" resource="0" file="Source/Source/Network/RtpManager.h"/>
+        </GROUP>
+        <GROUP id="{A1708A6F-E013-306A-F43C-D2AA13FF0807}" name="Resources">
+          <FILE id="Gde1f2" name="app.manifest" compile="0" resource="1" file="Source/Source/Resources/app.manifest"/>
+          <FILE id="F4QK6F" name="PatchworldBridge.desktop.in" compile="0" resource="1"
+                file="Source/Source/Resources/PatchworldBridge.desktop.in"/>
+        </GROUP>
+        <GROUP id="{8B7E8B1E-8569-A750-9789-1B845C105CAA}" name="Services">
+          <FILE id="box0TV" name="AutoSaver.h" compile="0" resource="0" file="Source/Source/Services/AutoSaver.h"/>
+          <FILE id="jYLFg4" name="DeferredDeleter.h" compile="0" resource="0"
+                file="Source/Source/Services/DeferredDeleter.h"/>
+          <FILE id="de7o31" name="GamepadMapping.h" compile="0" resource="0"
+                file="Source/Source/Services/GamepadMapping.h"/>
+          <FILE id="EInCmc" name="GamepadService.cpp" compile="1" resource="0"
+                file="Source/Source/Services/GamepadService.cpp"/>
+          <FILE id="zd4zZ1" name="GamepadService.h" compile="0" resource="0"
+                file="Source/Source/Services/GamepadService.h"/>
+          <FILE id="E7HwZ2" name="LatencyCalibrator.h" compile="0" resource="0"
+                file="Source/Source/Services/LatencyCalibrator.h"/>
+          <FILE id="BpBxNy" name="LatencyTester.h" compile="0" resource="0" file="Source/Source/Services/LatencyTester.h"/>
+          <FILE id="Sl9e1q" name="MidiDeviceService.cpp" compile="1" resource="0"
+                file="Source/Source/Services/MidiDeviceService.cpp"/>
+          <FILE id="QyHXvp" name="MidiDeviceService.h" compile="0" resource="0"
+                file="Source/Source/Services/MidiDeviceService.h"/>
+          <FILE id="ZMTUg1" name="MidiFilter.h" compile="0" resource="0" file="Source/Source/Services/MidiFilter.h"/>
+          <FILE id="U8CLVE" name="MidiMappingService.cpp" compile="1" resource="0"
+                file="Source/Source/Services/MidiMappingService.cpp"/>
+          <FILE id="rywl7o" name="MidiMappingService.h" compile="0" resource="0"
+                file="Source/Source/Services/MidiMappingService.h"/>
+          <FILE id="UoaTq5" name="MidiTransformer.h" compile="0" resource="0"
+                file="Source/Source/Services/MidiTransformer.h"/>
+          <FILE id="lNnYFx" name="ProfileService.cpp" compile="1" resource="0"
+                file="Source/Source/Services/ProfileService.cpp"/>
+          <FILE id="DuB33w" name="ProfileService.h" compile="0" resource="0"
+                file="Source/Source/Services/ProfileService.h"/>
+          <FILE id="D6rQpq" name="StateRecycler.h" compile="0" resource="0" file="Source/Source/Services/StateRecycler.h"/>
+          <FILE id="CFagOZ" name="VelocityProcessor.h" compile="0" resource="0"
+                file="Source/Source/Services/VelocityProcessor.h"/>
+        </GROUP>
+        <GROUP id="{811C8E7F-3847-A998-528B-7ED10BF7A4B8}" name="Tests">
+          <FILE id="oNNmAJ" name="AirlockTest.h" compile="0" resource="0" file="Source/Source/Tests/AirlockTest.h"/>
+          <FILE id="T1gxiJ" name="ClockSmootherTest.h" compile="0" resource="0"
+                file="Source/Source/Tests/ClockSmootherTest.h"/>
+          <FILE id="UDtfqQ" name="MidiMappingCurveTest.h" compile="0" resource="0"
+                file="Source/Source/Tests/MidiMappingCurveTest.h"/>
+          <FILE id="gssYcx" name="RunAll.h" compile="0" resource="0" file="Source/Source/Tests/RunAll.h"/>
+        </GROUP>
+        <GROUP id="{CBE371FF-BBE7-DF89-E455-1399468CD4C7}" name="UI">
+          <GROUP id="{6DC24F8A-E838-687B-9DD4-6B9E14CA792C}" name="Assets">
+            <FILE id="fCcZzv" name="logo.png" compile="0" resource="1" file="Source/Source/UI/Assets/logo.png"/>
+          </GROUP>
+          <GROUP id="{85CC26AA-09D2-A638-B59A-AEDE3C430FAD}" name="Panels">
+            <FILE id="ZS0EFL" name="ArpeggiatorPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/ArpeggiatorPanel.h"/>
+            <FILE id="zRBJX8" name="ChordGeneratorPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/ChordGeneratorPanel.h"/>
+            <FILE id="lIJMeY" name="ConfigControls.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/ConfigControls.h"/>
+            <FILE id="OSZsPm" name="ConfigPanel.h" compile="0" resource="0" file="Source/Source/UI/Panels/ConfigPanel.h"/>
+            <FILE id="hUOxQS" name="HeaderPanel.h" compile="0" resource="0" file="Source/Source/UI/Panels/HeaderPanel.h"/>
+            <FILE id="J1tsT1" name="LfoGeneratorPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/LfoGeneratorPanel.h"/>
+            <FILE id="MmhBND" name="MidiDevicePickerPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/MidiDevicePickerPanel.h"/>
+            <FILE id="RMPxhP" name="MidiPlaylist.h" compile="0" resource="0" file="Source/Source/UI/Panels/MidiPlaylist.h"/>
+            <FILE id="T6TV52" name="MidiPortsTablePanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/MidiPortsTablePanel.h"/>
+            <FILE id="sSPMcd" name="MixerPanel.h" compile="0" resource="0" file="Source/Source/UI/Panels/MixerPanel.h"/>
+            <FILE id="mpEOeb" name="MixerStrip.h" compile="0" resource="0" file="Source/Source/UI/Panels/MixerStrip.h"/>
+            <FILE id="NozmHC" name="ModulesTogglePanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/ModulesTogglePanel.h"/>
+            <FILE id="cgtwG7" name="NetworkConfigPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/NetworkConfigPanel.h"/>
+            <FILE id="tZBZIf" name="PerformancePanel.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Panels/PerformancePanel.cpp"/>
+            <FILE id="nHuBPl" name="PerformancePanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/PerformancePanel.h"/>
+            <FILE id="LoYH7A" name="ScopedNoteEdit.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/ScopedNoteEdit.h"/>
+            <FILE id="wnRCcB" name="SequencerPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/SequencerPanel.h"/>
+            <FILE id="xh9KFi" name="SpliceEditor.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Panels/SpliceEditor.cpp"/>
+            <FILE id="Eegyar" name="SpliceEditor.h" compile="0" resource="0" file="Source/Source/UI/Panels/SpliceEditor.h"/>
+            <FILE id="p3JuPM" name="SpliceEditorMouse.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Panels/SpliceEditorMouse.cpp"/>
+            <FILE id="zbVVzY" name="SpliceEditorRendering.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Panels/SpliceEditorRendering.cpp"/>
+            <FILE id="pmGIAQ" name="SpliceEditorRendering.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/SpliceEditorRendering.h"/>
+            <FILE id="RTFIau" name="StatusBar.h" compile="0" resource="0" file="Source/Source/UI/Panels/StatusBar.h"/>
+            <FILE id="csnWN4" name="TooltipManager.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Panels/TooltipManager.cpp"/>
+            <FILE id="BEbk4u" name="TooltipManager.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/TooltipManager.h"/>
+            <FILE id="wQpAVL" name="TrafficMonitor.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/TrafficMonitor.h"/>
+            <FILE id="MNuos7" name="TransportPanel.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Panels/TransportPanel.cpp"/>
+            <FILE id="LOUH3M" name="TransportPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Panels/TransportPanel.h"/>
+          </GROUP>
+          <GROUP id="{D927D03D-D5FB-3F8B-3C5B-247A7263403A}" name="Widgets">
+            <FILE id="KD1y0o" name="ConnectionsButton.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/ConnectionsButton.h"/>
+            <FILE id="TjzIx4" name="CRTBackground.h" compile="0" resource="0" file="Source/Source/UI/Widgets/CRTBackground.h"/>
+            <FILE id="jYhpNk" name="DiagnosticOverlay.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/DiagnosticOverlay.h"/>
+            <FILE id="Kc32aC" name="DynamicBackground.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/DynamicBackground.h"/>
+            <FILE id="tcolbb" name="EnhancedSlider.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/EnhancedSlider.h"/>
+            <FILE id="FmTubD" name="HoverGlowButton.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/HoverGlowButton.h"/>
+            <FILE id="JXIbOc" name="HoverGlowManager.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/HoverGlowManager.h"/>
+            <FILE id="kKt0RT" name="Indicators.h" compile="0" resource="0" file="Source/Source/UI/Widgets/Indicators.h"/>
+            <FILE id="rvMeyi" name="LayoutChoiceWizard.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/LayoutChoiceWizard.h"/>
+            <FILE id="dM6NRF" name="LinkBeatIndicator.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/LinkBeatIndicator.h"/>
+            <FILE id="TLjzku" name="MeterBarRenderer.cpp" compile="1" resource="0"
+                  file="Source/Source/UI/Widgets/MeterBarRenderer.cpp"/>
+            <FILE id="JWf0zA" name="MeterBarRenderer.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/MeterBarRenderer.h"/>
+            <FILE id="qAfY4R" name="MidiLearnOverlay.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/MidiLearnOverlay.h"/>
+            <FILE id="hcUELK" name="ModuleHeader.h" compile="0" resource="0" file="Source/Source/UI/Widgets/ModuleHeader.h"/>
+            <FILE id="Ubh2Da" name="ModuleNestingManager.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/ModuleNestingManager.h"/>
+            <FILE id="SmT74t" name="ModuleWindow.h" compile="0" resource="0" file="Source/Source/UI/Widgets/ModuleWindow.h"/>
+            <FILE id="HETS2s" name="MorphSlider.h" compile="0" resource="0" file="Source/Source/UI/Widgets/MorphSlider.h"/>
+            <FILE id="DH03T6" name="ParameterSearchOverlay.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/ParameterSearchOverlay.h"/>
+            <FILE id="MT0jcE" name="PerformanceXYPad.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/PerformanceXYPad.h"/>
+            <FILE id="MISINi" name="PhaseVisualizer.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/PhaseVisualizer.h"/>
+            <FILE id="GAdugw" name="PianoRoll.h" compile="0" resource="0" file="Source/Source/UI/Widgets/PianoRoll.h"/>
+            <FILE id="f3043T" name="PlayView.h" compile="0" resource="0" file="Source/Source/UI/Widgets/PlayView.h"/>
+            <FILE id="dxEJA0" name="ProKnob.h" compile="0" resource="0" file="Source/Source/UI/Widgets/ProKnob.h"/>
+            <FILE id="l4ogS8" name="SetupWizard.h" compile="0" resource="0" file="Source/Source/UI/Widgets/SetupWizard.h"/>
+            <FILE id="jQxQ9X" name="ShortcutsPanel.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/ShortcutsPanel.h"/>
+            <FILE id="QHIWDb" name="SignalPathLegend.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/SignalPathLegend.h"/>
+            <FILE id="Qrct9E" name="TimelineComponent.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/TimelineComponent.h"/>
+            <FILE id="Z5uZoZ" name="VelocityLane.h" compile="0" resource="0" file="Source/Source/UI/Widgets/VelocityLane.h"/>
+            <FILE id="EV3E7l" name="VelocitySensitiveSlider.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/VelocitySensitiveSlider.h"/>
+            <FILE id="IAVbwd" name="WheelComponent.h" compile="0" resource="0"
+                  file="Source/Source/UI/Widgets/WheelComponent.h"/>
+          </GROUP>
+          <FILE id="cEBkym" name="Animation.h" compile="0" resource="0" file="Source/Source/UI/Animation.h"/>
+          <FILE id="lqpquL" name="ControlHelpers.h" compile="0" resource="0"
+                file="Source/Source/UI/ControlHelpers.h"/>
+          <FILE id="pzLRvE" name="CustomMenuLookAndFeel.h" compile="0" resource="0"
+                file="Source/Source/UI/CustomMenuLookAndFeel.h"/>
+          <FILE id="EeMFDg" name="EnhancedButton.h" compile="0" resource="0"
+                file="Source/Source/UI/EnhancedButton.h"/>
+          <FILE id="V3QCro" name="Fonts.h" compile="0" resource="0" file="Source/Source/UI/Fonts.h"/>
+          <FILE id="stKSA2" name="GPUOffload.md" compile="0" resource="1" file="Source/Source/UI/GPUOffload.md"/>
+          <FILE id="nNe8HY" name="LayoutHelpers.h" compile="0" resource="0" file="Source/Source/UI/LayoutHelpers.h"/>
+          <FILE id="LUUbOV" name="MainComponent.cpp" compile="1" resource="0"
+                file="Source/Source/UI/MainComponent.cpp"/>
+          <FILE id="u01PHe" name="MainComponent.h" compile="0" resource="0" file="Source/Source/UI/MainComponent.h"/>
+          <FILE id="lJE2ku" name="MainComponentCore.cpp" compile="1" resource="0"
+                file="Source/Source/UI/MainComponentCore.cpp"/>
+          <FILE id="KZKk7g" name="MainComponentEvents.cpp" compile="1" resource="0"
+                file="Source/Source/UI/MainComponentEvents.cpp"/>
+          <FILE id="pprCev" name="MainComponentGL.cpp" compile="1" resource="0"
+                file="Source/Source/UI/MainComponentGL.cpp"/>
+          <FILE id="tH6DGO" name="MixerLookAndFeel.h" compile="0" resource="0"
+                file="Source/Source/UI/MixerLookAndFeel.h"/>
+          <FILE id="LB0XBc" name="NoteEditUndoAction.h" compile="0" resource="0"
+                file="Source/Source/UI/NoteEditUndoAction.h"/>
+          <FILE id="vfFXps" name="NoteGeometry.h" compile="0" resource="0" file="Source/Source/UI/NoteGeometry.h"/>
+          <FILE id="B7DXNU" name="OPENGL_GHOSTING_RESEARCH.md" compile="0" resource="1"
+                file="Source/Source/UI/OPENGL_GHOSTING_RESEARCH.md"/>
+          <FILE id="AMdOKT" name="OscAddressDialog.h" compile="0" resource="0"
+                file="Source/Source/UI/OscAddressDialog.h"/>
+          <FILE id="GD55LC" name="PopupMenuOptions.h" compile="0" resource="0"
+                file="Source/Source/UI/PopupMenuOptions.h"/>
+          <FILE id="JFLX4F" name="RenderBackend.h" compile="0" resource="0" file="Source/Source/UI/RenderBackend.h"/>
+          <FILE id="e8lWGW" name="RenderConfig.h" compile="0" resource="0" file="Source/Source/UI/RenderConfig.h"/>
+          <FILE id="hQNVvr" name="ScaledComponent.h" compile="0" resource="0"
+                file="Source/Source/UI/ScaledComponent.h"/>
+          <FILE id="h5L0rz" name="Theme.h" compile="0" resource="0" file="Source/Source/UI/Theme.h"/>
+          <FILE id="FEMW8u" name="UIState.h" compile="0" resource="0" file="Source/Source/UI/UIState.h"/>
+          <FILE id="HDhYvr" name="VulkanContext.cpp" compile="1" resource="0"
+                file="Source/Source/UI/VulkanContext.cpp"/>
+          <FILE id="BSFpoh" name="VulkanContext.h" compile="0" resource="0" file="Source/Source/UI/VulkanContext.h"/>
+        </GROUP>
+        <FILE id="PRdOMa" name="Main.cpp" compile="1" resource="0" file="Source/Source/Main.cpp"/>
+        <FILE id="vb86Kq" name="README.md" compile="0" resource="1" file="Source/Source/README.md"/>
+        <FILE id="Qj6Zg8" name="SOURCE_AUDIT.md" compile="0" resource="1" file="Source/Source/SOURCE_AUDIT.md"/>
+      </GROUP>
+      <GROUP id="{86A39ACB-C6C6-B385-3C72-7D0177AA9E69}" name="Tests">
+        <FILE id="P5FGYe" name="AirlockTest.h" compile="0" resource="0" file="Source/Tests/AirlockTest.h"/>
+        <FILE id="YmTkc8" name="ClockSmootherTest.h" compile="0" resource="0"
+              file="Source/Tests/ClockSmootherTest.h"/>
+        <FILE id="dFDx0w" name="MidiMappingCurveTest.h" compile="0" resource="0"
+              file="Source/Tests/MidiMappingCurveTest.h"/>
+        <FILE id="ZIcgLP" name="RunAll.h" compile="0" resource="0" file="Source/Tests/RunAll.h"/>
+      </GROUP>
+      <GROUP id="{DFA6B3E0-AFA8-4690-E5C4-853505F064C3}" name="UI">
+        <GROUP id="{3B8E9F32-609F-A9C8-4563-925289B3AE79}" name="Assets">
+          <FILE id="jz4m3j" name="logo.png" compile="0" resource="1" file="Source/UI/Assets/logo.png"/>
+        </GROUP>
+        <GROUP id="{32FCEA73-8A76-99D4-0E37-686FE410BB37}" name="Panels">
+          <FILE id="tp3WwN" name="ArpeggiatorPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/ArpeggiatorPanel.h"/>
+          <FILE id="SAbcai" name="ChordGeneratorPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/ChordGeneratorPanel.h"/>
+          <FILE id="mpnWQi" name="ConfigControls.h" compile="0" resource="0"
+                file="Source/UI/Panels/ConfigControls.h"/>
+          <FILE id="lXQubm" name="ConfigPanel.h" compile="0" resource="0" file="Source/UI/Panels/ConfigPanel.h"/>
+          <FILE id="AaOZ0G" name="HeaderPanel.h" compile="0" resource="0" file="Source/UI/Panels/HeaderPanel.h"/>
+          <FILE id="ixrNUu" name="LfoGeneratorPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/LfoGeneratorPanel.h"/>
+          <FILE id="lcKvXm" name="MidiDevicePickerPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/MidiDevicePickerPanel.h"/>
+          <FILE id="qrhsRc" name="MidiPlaylist.h" compile="0" resource="0" file="Source/UI/Panels/MidiPlaylist.h"/>
+          <FILE id="kWyIf2" name="MidiPortsTablePanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/MidiPortsTablePanel.h"/>
+          <FILE id="iQAXS2" name="MixerPanel.h" compile="0" resource="0" file="Source/UI/Panels/MixerPanel.h"/>
+          <FILE id="fr3Tp0" name="MixerStrip.h" compile="0" resource="0" file="Source/UI/Panels/MixerStrip.h"/>
+          <FILE id="uaHsNG" name="ModulesTogglePanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/ModulesTogglePanel.h"/>
+          <FILE id="SBsgyt" name="NetworkConfigPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/NetworkConfigPanel.h"/>
+          <FILE id="nRzXUu" name="PerformancePanel.cpp" compile="1" resource="0"
+                file="Source/UI/Panels/PerformancePanel.cpp"/>
+          <FILE id="O6Wm4F" name="PerformancePanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/PerformancePanel.h"/>
+          <FILE id="UAN7KO" name="ScopedNoteEdit.h" compile="0" resource="0"
+                file="Source/UI/Panels/ScopedNoteEdit.h"/>
+          <FILE id="BdR4zh" name="SequencerPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/SequencerPanel.h"/>
+          <FILE id="VoYfIC" name="SpliceEditor.cpp" compile="1" resource="0"
+                file="Source/UI/Panels/SpliceEditor.cpp"/>
+          <FILE id="JhsnRQ" name="SpliceEditor.h" compile="0" resource="0" file="Source/UI/Panels/SpliceEditor.h"/>
+          <FILE id="pPav5b" name="SpliceEditorMouse.cpp" compile="1" resource="0"
+                file="Source/UI/Panels/SpliceEditorMouse.cpp"/>
+          <FILE id="UBcO7s" name="SpliceEditorRendering.cpp" compile="1" resource="0"
+                file="Source/UI/Panels/SpliceEditorRendering.cpp"/>
+          <FILE id="tb72BP" name="SpliceEditorRendering.h" compile="0" resource="0"
+                file="Source/UI/Panels/SpliceEditorRendering.h"/>
+          <FILE id="lnYvqS" name="StatusBar.h" compile="0" resource="0" file="Source/UI/Panels/StatusBar.h"/>
+          <FILE id="fwRTva" name="TooltipManager.cpp" compile="1" resource="0"
+                file="Source/UI/Panels/TooltipManager.cpp"/>
+          <FILE id="RJHVcv" name="TooltipManager.h" compile="0" resource="0"
+                file="Source/UI/Panels/TooltipManager.h"/>
+          <FILE id="TzbTAR" name="TrafficMonitor.h" compile="0" resource="0"
+                file="Source/UI/Panels/TrafficMonitor.h"/>
+          <FILE id="Sxoauy" name="TransportPanel.cpp" compile="1" resource="0"
+                file="Source/UI/Panels/TransportPanel.cpp"/>
+          <FILE id="znjGmg" name="TransportPanel.h" compile="0" resource="0"
+                file="Source/UI/Panels/TransportPanel.h"/>
+        </GROUP>
+        <GROUP id="{D61929E7-9177-9988-3F10-1A662E668D46}" name="Widgets">
+          <FILE id="S9RWMg" name="ConnectionsButton.h" compile="0" resource="0"
+                file="Source/UI/Widgets/ConnectionsButton.h"/>
+          <FILE id="jd1wsq" name="CRTBackground.h" compile="0" resource="0" file="Source/UI/Widgets/CRTBackground.h"/>
+          <FILE id="w7aZ20" name="DiagnosticOverlay.h" compile="0" resource="0"
+                file="Source/UI/Widgets/DiagnosticOverlay.h"/>
+          <FILE id="iifc5x" name="DynamicBackground.h" compile="0" resource="0"
+                file="Source/UI/Widgets/DynamicBackground.h"/>
+          <FILE id="zUQ8u9" name="EnhancedSlider.h" compile="0" resource="0"
+                file="Source/UI/Widgets/EnhancedSlider.h"/>
+          <FILE id="CtzOo5" name="HoverGlowButton.h" compile="0" resource="0"
+                file="Source/UI/Widgets/HoverGlowButton.h"/>
+          <FILE id="kANyeE" name="HoverGlowManager.h" compile="0" resource="0"
+                file="Source/UI/Widgets/HoverGlowManager.h"/>
+          <FILE id="QvgZnk" name="Indicators.h" compile="0" resource="0" file="Source/UI/Widgets/Indicators.h"/>
+          <FILE id="PQJUkN" name="LayoutChoiceWizard.h" compile="0" resource="0"
+                file="Source/UI/Widgets/LayoutChoiceWizard.h"/>
+          <FILE id="nN7Zhm" name="LinkBeatIndicator.h" compile="0" resource="0"
+                file="Source/UI/Widgets/LinkBeatIndicator.h"/>
+          <FILE id="gKSrnz" name="MeterBarRenderer.cpp" compile="1" resource="0"
+                file="Source/UI/Widgets/MeterBarRenderer.cpp"/>
+          <FILE id="Efp7Vt" name="MeterBarRenderer.h" compile="0" resource="0"
+                file="Source/UI/Widgets/MeterBarRenderer.h"/>
+          <FILE id="NsPqwF" name="MidiLearnOverlay.h" compile="0" resource="0"
+                file="Source/UI/Widgets/MidiLearnOverlay.h"/>
+          <FILE id="cy6SvQ" name="ModuleHeader.h" compile="0" resource="0" file="Source/UI/Widgets/ModuleHeader.h"/>
+          <FILE id="rThm0j" name="ModuleNestingManager.h" compile="0" resource="0"
+                file="Source/UI/Widgets/ModuleNestingManager.h"/>
+          <FILE id="cKyoxL" name="ModuleWindow.h" compile="0" resource="0" file="Source/UI/Widgets/ModuleWindow.h"/>
+          <FILE id="OlDE91" name="MorphSlider.h" compile="0" resource="0" file="Source/UI/Widgets/MorphSlider.h"/>
+          <FILE id="nybuSZ" name="ParameterSearchOverlay.h" compile="0" resource="0"
+                file="Source/UI/Widgets/ParameterSearchOverlay.h"/>
+          <FILE id="DtQmI1" name="PerformanceXYPad.h" compile="0" resource="0"
+                file="Source/UI/Widgets/PerformanceXYPad.h"/>
+          <FILE id="Lshyyu" name="PhaseVisualizer.h" compile="0" resource="0"
+                file="Source/UI/Widgets/PhaseVisualizer.h"/>
+          <FILE id="hpcFtD" name="PianoRoll.h" compile="0" resource="0" file="Source/UI/Widgets/PianoRoll.h"/>
+          <FILE id="cyUO2s" name="PlayView.h" compile="0" resource="0" file="Source/UI/Widgets/PlayView.h"/>
+          <FILE id="Z6FN4u" name="ProKnob.h" compile="0" resource="0" file="Source/UI/Widgets/ProKnob.h"/>
+          <FILE id="YxnW4k" name="SetupWizard.h" compile="0" resource="0" file="Source/UI/Widgets/SetupWizard.h"/>
+          <FILE id="E9Njco" name="ShortcutsPanel.h" compile="0" resource="0"
+                file="Source/UI/Widgets/ShortcutsPanel.h"/>
+          <FILE id="QAbUfB" name="SignalPathLegend.h" compile="0" resource="0"
+                file="Source/UI/Widgets/SignalPathLegend.h"/>
+          <FILE id="ogNGBs" name="TimelineComponent.h" compile="0" resource="0"
+                file="Source/UI/Widgets/TimelineComponent.h"/>
+          <FILE id="KdOsRe" name="VelocityLane.h" compile="0" resource="0" file="Source/UI/Widgets/VelocityLane.h"/>
+          <FILE id="yECpul" name="VelocitySensitiveSlider.h" compile="0" resource="0"
+                file="Source/UI/Widgets/VelocitySensitiveSlider.h"/>
+          <FILE id="IsDhYl" name="WheelComponent.h" compile="0" resource="0"
+                file="Source/UI/Widgets/WheelComponent.h"/>
+        </GROUP>
+        <FILE id="rgCB0g" name="Animation.h" compile="0" resource="0" file="Source/UI/Animation.h"/>
+        <FILE id="wtBwlu" name="ControlHelpers.h" compile="0" resource="0"
+              file="Source/UI/ControlHelpers.h"/>
+        <FILE id="axAMTG" name="CustomMenuLookAndFeel.h" compile="0" resource="0"
+              file="Source/UI/CustomMenuLookAndFeel.h"/>
+        <FILE id="ghfX2p" name="EnhancedButton.h" compile="0" resource="0"
+              file="Source/UI/EnhancedButton.h"/>
+        <FILE id="rBKHNr" name="Fonts.h" compile="0" resource="0" file="Source/UI/Fonts.h"/>
+        <FILE id="npyNHv" name="GPUOffload.md" compile="0" resource="1" file="Source/UI/GPUOffload.md"/>
+        <FILE id="ZSfAxD" name="LayoutHelpers.h" compile="0" resource="0" file="Source/UI/LayoutHelpers.h"/>
+        <FILE id="CwvNwk" name="MainComponent.cpp" compile="1" resource="0"
+              file="Source/UI/MainComponent.cpp"/>
+        <FILE id="GJAVkd" name="MainComponent.h" compile="0" resource="0" file="Source/UI/MainComponent.h"/>
+        <FILE id="FDCWJx" name="MainComponentCore.cpp" compile="1" resource="0"
+              file="Source/UI/MainComponentCore.cpp"/>
+        <FILE id="zACTpI" name="MainComponentEvents.cpp" compile="1" resource="0"
+              file="Source/UI/MainComponentEvents.cpp"/>
+        <FILE id="TX54DQ" name="MainComponentGL.cpp" compile="1" resource="0"
+              file="Source/UI/MainComponentGL.cpp"/>
+        <FILE id="yEuAaE" name="MixerLookAndFeel.h" compile="0" resource="0"
+              file="Source/UI/MixerLookAndFeel.h"/>
+        <FILE id="UsOf1L" name="NoteEditUndoAction.h" compile="0" resource="0"
+              file="Source/UI/NoteEditUndoAction.h"/>
+        <FILE id="OZNHjo" name="NoteGeometry.h" compile="0" resource="0" file="Source/UI/NoteGeometry.h"/>
+        <FILE id="Erxskh" name="OPENGL_GHOSTING_RESEARCH.md" compile="0" resource="1"
+              file="Source/UI/OPENGL_GHOSTING_RESEARCH.md"/>
+        <FILE id="A6HVbv" name="OscAddressDialog.h" compile="0" resource="0"
+              file="Source/UI/OscAddressDialog.h"/>
+        <FILE id="r4Sun4" name="PopupMenuOptions.h" compile="0" resource="0"
+              file="Source/UI/PopupMenuOptions.h"/>
+        <FILE id="lnyWnk" name="RenderBackend.h" compile="0" resource="0" file="Source/UI/RenderBackend.h"/>
+        <FILE id="EyU4Hm" name="RenderConfig.h" compile="0" resource="0" file="Source/UI/RenderConfig.h"/>
+        <FILE id="mTrJWz" name="ScaledComponent.h" compile="0" resource="0"
+              file="Source/UI/ScaledComponent.h"/>
+        <FILE id="BOP95K" name="Theme.h" compile="0" resource="0" file="Source/UI/Theme.h"/>
+        <FILE id="DPqMEE" name="UIState.h" compile="0" resource="0" file="Source/UI/UIState.h"/>
+        <FILE id="ZN50ED" name="VulkanContext.cpp" compile="1" resource="0"
+              file="Source/UI/VulkanContext.cpp"/>
+        <FILE id="EuB1VV" name="VulkanContext.h" compile="0" resource="0" file="Source/UI/VulkanContext.h"/>
+      </GROUP>
+      <FILE id="AnGfMS" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="SIVoz5" name="README.md" compile="0" resource="1" file="Source/README.md"/>
+      <FILE id="qDt9e5" name="SOURCE_AUDIT.md" compile="0" resource="1" file="Source/SOURCE_AUDIT.md"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

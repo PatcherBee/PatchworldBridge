@@ -6,6 +6,24 @@
 
  -Update 2-
 
+## Quick start
+
+1. **Run the app** — On first launch you’ll see a layout wizard (Minimal / Full / Performance). Pick one; you can change it later via Menu → Layout.
+2. **Connect OSC** — Open Config (gear), enter your Patchworld/headset IP and ports (e.g. out 5550, in 3330), then click Connect. Status bar shows “OSC connected” when ready.
+3. **MIDI** — Select your MIDI input (e.g. Virtual Keyboard or hardware) and output in Config. Use the main Sequencer module for step sequencing and the Editor for piano roll.
+4. **Transport** — Play/Stop, tempo, and Oct +/- are in the transport bar. Use Menu → Keyboard shortcuts to see hotkeys.
+
+## Rendering & performance (all platforms)
+
+- **Software** — No GPU required; works on every system. Use this if you have no dedicated GPU or drivers are problematic.
+- **OpenGL (Eco / Pro)** — GPU-accelerated rendering. Eco ≈ 30 FPS, Pro ≈ 60+ FPS. Supported on **Windows, Linux, and macOS**.
+- **Vulkan** — Optional build with **Vulkan SDK** and `-DPATCHWORLD_VULKAN_SUPPORT=ON`. On **Windows**, the Vulkan backend uses the loader and Win32 surface; when selected in Config (GPU backend = Vulkan), the main window is rendered via Vulkan (clear-only for now; full UI overlay later). On **Linux/macOS**, Vulkan surface creation is stubbed (use OpenGL). Detection at runtime shows Vulkan in Config when the loader is present.
+- **Metal** — Native on **macOS**; detected for future use. The app currently uses OpenGL on Mac for compatibility.
+- **macOS / Apple Silicon (ARM)** — Builds natively for arm64. Threading (Adaptive) reserves cores for audio/UI and caps worker threads on ARM for good P-core/E-core balance. Optional link-time MoltenVK: set `PATCHWORLD_LINK_MOLTENVK=ON` and have Vulkan SDK or `molten-vk` in a standard path.
+- **Threading** (Config → Worker Threads): **Single** (one thread), **Multi-core** (fixed workers), **Adaptive** (auto-detect). Affects background work (e.g. OSC, processing); audio and UI remain responsive.
+
+If the GPU context is lost (e.g. sleep/wake, driver reset), the app switches to Software and shows a status message. You can switch back to Eco/Pro in Config after reconnecting. **Vulkan**: device lost is handled the same way (switch to Software); swapchain is recreated automatically on resize or when the driver returns out-of-date.
+
 🔗 Getting Connected 🔗
 
 📡 Find Your Headset IPv4 Adress🐝

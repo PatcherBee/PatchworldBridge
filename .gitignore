@@ -44,6 +44,9 @@ Release/
 Debug/
 *.sdf
 *.opensdf
+libs/gainput
+logo.png
+rebuild.ps1
 
 # --- JUCE Specific ---
 /JUCE/
